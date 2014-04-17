@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1422</width>
-    <height>531</height>
+    <width>1093</width>
+    <height>950</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -24,359 +24,502 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout">
-     <item>
-      <widget class="QLabel" name="recorderStatusCaptionLabel">
-       <property name="font">
-        <font>
-         <pointsize>12</pointsize>
-         <weight>75</weight>
-         <bold>true</bold>
-        </font>
-       </property>
-       <property name="text">
-        <string>Status</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <spacer name="horizontalSpacer">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-    </layout>
-   </item>
-   <item>
-    <layout class="QVBoxLayout" name="verticalLayout_4">
-     <item>
-      <widget class="QTreeWidget" name="statusTreeWidget">
-       <property name="frameShape">
-        <enum>QFrame::Box</enum>
-       </property>
-       <property name="frameShadow">
-        <enum>QFrame::Plain</enum>
-       </property>
-       <property name="midLineWidth">
-        <number>2</number>
-       </property>
-       <property name="editTriggers">
-        <set>QAbstractItemView::NoEditTriggers</set>
-       </property>
-       <property name="alternatingRowColors">
-        <bool>true</bool>
-       </property>
-       <property name="autoExpandDelay">
-        <number>0</number>
-       </property>
-       <attribute name="headerVisible">
-        <bool>false</bool>
-       </attribute>
-       <attribute name="headerDefaultSectionSize">
-        <number>100</number>
-       </attribute>
-       <attribute name="headerMinimumSectionSize">
-        <number>100</number>
-       </attribute>
-       <column>
-        <property name="text">
-         <string>subject</string>
+    <widget class="QGroupBox" name="statusBox">
+     <property name="title">
+      <string>Status</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_5">
+      <item row="0" column="0">
+       <widget class="QTreeWidget" name="statusTreeWidget">
+        <property name="frameShape">
+         <enum>QFrame::Box</enum>
         </property>
-       </column>
-       <column>
-        <property name="text">
-         <string>status</string>
+        <property name="frameShadow">
+         <enum>QFrame::Plain</enum>
         </property>
-       </column>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item>
-    <layout class="QGridLayout" name="gridLayout">
-     <item row="2" column="0">
-      <widget class="QLabel" name="RecordNamelabel">
-       <property name="frameShape">
-        <enum>QFrame::NoFrame</enum>
-       </property>
-       <property name="text">
-        <string>Record Name:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="0">
-      <widget class="QLabel" name="locationLabel">
-       <property name="text">
-        <string>Recording Directory:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="3">
-      <widget class="QPushButton" name="selectDirectoryButton">
-       <property name="text">
-        <string>Select</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="1">
-      <widget class="QLineEdit" name="recordNameLineEdit">
-       <property name="text">
-        <string/>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="1">
-      <widget class="QLineEdit" name="directoryLineEdit">
-       <property name="enabled">
-        <bool>true</bool>
-       </property>
-       <property name="autoFillBackground">
-        <bool>false</bool>
-       </property>
-       <property name="text">
-        <string>~/</string>
-       </property>
-       <property name="frame">
-        <bool>true</bool>
-       </property>
-       <property name="readOnly">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="0">
-      <widget class="QLabel" name="settingslabel">
-       <property name="font">
-        <font>
-         <pointsize>12</pointsize>
-         <weight>75</weight>
-         <bold>true</bold>
-        </font>
-       </property>
-       <property name="text">
-        <string>Settings</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="3">
-      <widget class="QPushButton" name="genrateNameButton">
-       <property name="text">
-        <string>Generate</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_2"/>
-   </item>
-   <item>
-    <layout class="QGridLayout" name="gridLayout_2">
-     <item row="1" column="2">
-      <widget class="Line" name="line_8">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="2">
-      <widget class="QPushButton" name="startKinectButton">
-       <property name="text">
-        <string>Start Device</string>
-       </property>
-      </widget>
-     </item>
-     <item row="7" column="2">
-      <widget class="QToolButton" name="startRecordingButton">
-       <property name="enabled">
-        <bool>true</bool>
-       </property>
-       <property name="text">
-        <string>Start Recording</string>
-       </property>
-       <property name="checkable">
-        <bool>false</bool>
-       </property>
-       <property name="checked">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-     <item row="5" column="0">
-      <widget class="QLabel" name="label_2">
-       <property name="frameShape">
-        <enum>QFrame::NoFrame</enum>
-       </property>
-       <property name="frameShadow">
-        <enum>QFrame::Plain</enum>
-       </property>
-       <property name="text">
-        <string>Vicon</string>
-       </property>
-      </widget>
-     </item>
-     <item row="5" column="2">
-      <widget class="QPushButton" name="connectViconButton">
-       <property name="text">
-        <string>Connect</string>
-       </property>
-      </widget>
-     </item>
-     <item row="6" column="2">
-      <widget class="Line" name="line_5">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="3">
-      <widget class="Line" name="line_9">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="0">
-      <layout class="QHBoxLayout" name="horizontalLayout_3">
-       <item>
-        <spacer name="horizontalSpacer_3">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <property name="sizeType">
-          <enum>QSizePolicy::Fixed</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>10</width>
-           <height>0</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item>
-        <widget class="QCheckBox" name="publishPointCloudBox">
+        <property name="midLineWidth">
+         <number>0</number>
+        </property>
+        <property name="editTriggers">
+         <set>QAbstractItemView::NoEditTriggers</set>
+        </property>
+        <property name="alternatingRowColors">
+         <bool>true</bool>
+        </property>
+        <property name="autoExpandDelay">
+         <number>0</number>
+        </property>
+        <property name="animated">
+         <bool>true</bool>
+        </property>
+        <attribute name="headerVisible">
+         <bool>false</bool>
+        </attribute>
+        <attribute name="headerDefaultSectionSize">
+         <number>100</number>
+        </attribute>
+        <attribute name="headerMinimumSectionSize">
+         <number>100</number>
+        </attribute>
+        <column>
          <property name="text">
-          <string>Publish PointCould</string>
+          <string>subject</string>
          </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item row="2" column="0">
-      <widget class="QLabel" name="label">
-       <property name="text">
-        <string>Kinect/XTION Device</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="0">
-      <widget class="Line" name="line_7">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </widget>
-     </item>
-     <item row="6" column="3">
-      <widget class="Line" name="line_6">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </widget>
-     </item>
-     <item row="7" column="0">
-      <spacer name="horizontalSpacer_2">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item row="7" column="3">
-      <widget class="QPushButton" name="stopRecordingButton">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="text">
-        <string>Stop Recording</string>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="3">
-      <widget class="Line" name="line_4">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </widget>
-     </item>
-     <item row="5" column="3">
-      <widget class="QPushButton" name="disconnectViconButton">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="text">
-        <string>Disconnect</string>
-       </property>
-      </widget>
-     </item>
-     <item row="6" column="0">
-      <widget class="Line" name="line_2">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="0">
-      <widget class="Line" name="line">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="2">
-      <widget class="Line" name="line_3">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="3">
-      <widget class="QPushButton" name="closeKinectButton">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="text">
-        <string>Close Device</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="0">
-      <widget class="QLabel" name="controLabel">
-       <property name="font">
-        <font>
-         <pointsize>12</pointsize>
-         <weight>75</weight>
-         <bold>true</bold>
-        </font>
-       </property>
-       <property name="text">
-        <string>Control</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
+        </column>
+        <column>
+         <property name="text">
+          <string>status</string>
+         </property>
+        </column>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="sensorsBox">
+     <property name="title">
+      <string>1. Sensors</string>
+     </property>
+     <property name="flat">
+      <bool>false</bool>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_4">
+      <item row="0" column="1">
+       <widget class="QLabel" name="label_5">
+        <property name="text">
+         <string>Resolution</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="2">
+       <widget class="QComboBox" name="comboBox_2">
+        <item>
+         <property name="text">
+          <string>30</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>25</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>60</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLabel" name="label_6">
+        <property name="text">
+         <string>Frame Rate</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="1">
+       <widget class="QPushButton" name="connectViconButton">
+        <property name="text">
+         <string>Connect</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QLabel" name="label">
+        <property name="text">
+         <string>Depth Sensor (Kinect/XTION):</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="2">
+       <widget class="QPushButton" name="closeKinectButton">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Close Device</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QPushButton" name="startKinectButton">
+        <property name="text">
+         <string>Start Device</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2">
+       <widget class="QComboBox" name="comboBox">
+        <item>
+         <property name="text">
+          <string>VGA (640x480)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>QVGA (320x240)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>XVGA (1280x960)</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="5" column="0">
+       <widget class="QLabel" name="label_2">
+        <property name="frameShape">
+         <enum>QFrame::NoFrame</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Plain</enum>
+        </property>
+        <property name="text">
+         <string>Vicon</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="2">
+       <widget class="QPushButton" name="disconnectViconButton">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Disconnect</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0" colspan="3">
+       <widget class="Line" name="line">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="settingsBox">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="layoutDirection">
+      <enum>Qt::LeftToRight</enum>
+     </property>
+     <property name="title">
+      <string>2. Settings</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_2">
+      <item row="6" column="0">
+       <widget class="QLabel" name="displayObjectModelFileLabel">
+        <property name="text">
+         <string>Display Object Model</string>
+        </property>
+       </widget>
+      </item>
+      <item row="7" column="1">
+       <widget class="QLineEdit" name="lineEdit_3">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="frame">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QLineEdit" name="lineEdit">
+        <property name="frame">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QLabel" name="objectNameLabel">
+        <property name="text">
+         <string>Object Name</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2">
+       <widget class="QPushButton" name="detectObjectNameButton">
+        <property name="text">
+         <string>Detect from Vicon</string>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="2">
+       <widget class="QPushButton" name="selectDisplayObjectModelButton">
+        <property name="text">
+         <string>Select</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="locationLabel">
+        <property name="text">
+         <string>Recording Directory:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="1">
+       <widget class="QLineEdit" name="lineEdit_2">
+        <property name="frame">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="2">
+       <widget class="QPushButton" name="selectDirectoryButton">
+        <property name="text">
+         <string>Select</string>
+        </property>
+       </widget>
+      </item>
+      <item row="8" column="1">
+       <widget class="QCheckBox" name="singleObjectModelCheckBox">
+        <property name="text">
+         <string>Same as display model</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="QLineEdit" name="recordNameLineEdit">
+        <property name="text">
+         <string/>
+        </property>
+        <property name="frame">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="2">
+       <widget class="QPushButton" name="genrateNameButton">
+        <property name="text">
+         <string>Generate</string>
+        </property>
+       </widget>
+      </item>
+      <item row="7" column="2">
+       <widget class="QPushButton" name="selectTrackingObjectModelButton">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Select</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLineEdit" name="directoryLineEdit">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
+        <property name="autoFillBackground">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>~/</string>
+        </property>
+        <property name="frame">
+         <bool>true</bool>
+        </property>
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="7" column="0">
+       <widget class="QLabel" name="trackingObjectModelLabel">
+        <property name="text">
+         <string>Tracking Object Model</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="RecordNamelabel">
+        <property name="frameShape">
+         <enum>QFrame::NoFrame</enum>
+        </property>
+        <property name="text">
+         <string>Record Name:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="0">
+       <widget class="QLabel" name="objectModelPackageLabel">
+        <property name="text">
+         <string>Object Model Package</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="1">
+       <widget class="QLineEdit" name="objectModelPackageLineEdit">
+        <property name="text">
+         <string>arm_objects</string>
+        </property>
+        <property name="frame">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="calibrationBox">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="title">
+      <string>3. Calibration</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_6">
+      <item row="0" column="2">
+       <widget class="QPushButton" name="completeGlobalCalibrationButton">
+        <property name="text">
+         <string>Complete</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="localCalibrationLabel">
+        <property name="text">
+         <string>Local Calibration</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QPushButton" name="startGlobalCalibrationButton">
+        <property name="text">
+         <string>Start</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="2">
+       <widget class="QPushButton" name="completeLocalCalibrationButton">
+        <property name="text">
+         <string>Complete</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QPushButton" name="startLocalCalibrationButton">
+        <property name="text">
+         <string>Start</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0" colspan="3">
+       <widget class="QLabel" name="label_3">
+        <property name="font">
+         <font>
+          <pointsize>9</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>    -  Vicon - Depth Sensor World Coordinate Transformation</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QLabel" name="globalCalibration">
+        <property name="text">
+         <string>Global Calibration</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0" colspan="3">
+       <widget class="QLabel" name="label_4">
+        <property name="font">
+         <font>
+          <pointsize>9</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>    - Local Vicon - Depth Sensor Frame Coordinate Transformation</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="recordingBox">
+     <property name="title">
+      <string>4. Recording</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_7">
+      <item row="0" column="0">
+       <spacer name="horizontalSpacer_2">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item row="0" column="1">
+       <widget class="QToolButton" name="startRecordingButton">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Start Recording</string>
+        </property>
+        <property name="checkable">
+         <bool>false</bool>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2">
+       <widget class="QPushButton" name="stopRecordingButton">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Stop Recording</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="2">
+       <widget class="QPushButton" name="stopAllButton">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Stop All</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
    </item>
   </layout>
  </widget>

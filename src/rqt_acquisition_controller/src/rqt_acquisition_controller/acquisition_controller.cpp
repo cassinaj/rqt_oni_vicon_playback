@@ -71,7 +71,7 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
     recordedKinectFramesItem->setText(1, "0");
 
     ui_.statusTreeWidget->expandAll();
-    ui_.statusTreeWidget->resizeColumnToContents(0);
+    ui_.statusTreeWidget->resizeColumnToContents(0);   
 
     connect(ui_.startRecordingButton, SIGNAL(clicked()), this, SLOT(onStartRecording()));
     connect(ui_.stopRecordingButton, SIGNAL(clicked()), this, SLOT(onStopRecording()));

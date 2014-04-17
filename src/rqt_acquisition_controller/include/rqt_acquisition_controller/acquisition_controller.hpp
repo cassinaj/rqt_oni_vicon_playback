@@ -13,8 +13,7 @@
 #include <actionlib/client/simple_action_client.h>
 
 #include <oni_vicon_recorder/RecordAction.h>
-#include <oni_vicon_recorder/StartDepthSensorAction.h>
-#include <oni_vicon_recorder/CloseDepthSensorAction.h>
+#include <oni_vicon_recorder/RunDepthSensorAction.h>
 
 namespace rqt_acquisition_controller
 {
@@ -31,8 +30,7 @@ namespace rqt_acquisition_controller
          * This issue has been fixed in Hydro.
          */
         typedef actionlib::SimpleActionClient<oni_vicon_recorder::RecordAction> RecorderClient;
-        typedef actionlib::SimpleActionClient<oni_vicon_recorder::StartDepthSensorAction> StartDepthSensorClient;
-        typedef actionlib::SimpleActionClient<oni_vicon_recorder::CloseDepthSensorAction> CloseDepthSensorClient;
+        typedef actionlib::SimpleActionClient<oni_vicon_recorder::RunDepthSensorAction> RunDepthSensorClient;
 
         AcquisitionController();
         virtual void initPlugin(qt_gui_cpp::PluginContext& context);
@@ -54,6 +52,7 @@ namespace rqt_acquisition_controller
 
     private:
         bool validateSettings();
+        void setDepthSensorClosesStatus();
 
         void recordingActiveCB();
         void recordingDoneCB(
@@ -62,25 +61,27 @@ namespace rqt_acquisition_controller
         void recordingFeedbackCB(
                 oni_vicon_recorder::RecordFeedbackConstPtr feedback);
 
+        void startDepthSensorActiveCB();
         void startDepthSensorDoneCB(
                 const actionlib::SimpleClientGoalState state,
-                const oni_vicon_recorder::StartDepthSensorResultConstPtr result);
-
-        void closeDepthSensorDoneCB(
-                const actionlib::SimpleClientGoalState state,
-                const oni_vicon_recorder::CloseDepthSensorResultConstPtr result);
+                const oni_vicon_recorder::RunDepthSensorResultConstPtr result);
+        void startDepthSensorFeedbackCB(
+                oni_vicon_recorder::RunDepthSensorFeedbackConstPtr feedback);
 
     private:
         Ui::AcquisitionController ui_;
         QWidget* widget_;
 
         RecorderClient recording_ac_;
-        StartDepthSensorClient start_depth_sensor_ac_;
-        CloseDepthSensorClient close_depth_sensor_ac_;
+        RunDepthSensorClient run_depth_sensor_ac_;
 
         QTreeWidgetItem* recorderItem;
         QTreeWidgetItem* recorderViconItem;
         QTreeWidgetItem* recorderKinectItem;
+        QTreeWidgetItem* recorderKinectDeviceTypeItem;
+        QTreeWidgetItem* recorderKinectDeviceNameItem;
+        QTreeWidgetItem* recorderKinectResItem;
+        QTreeWidgetItem* recorderKinectFpsItem;
         QTreeWidgetItem* statusItem;
         QTreeWidgetItem* recordedViconFramesItem;
         QTreeWidgetItem* recordedKinectFramesItem;

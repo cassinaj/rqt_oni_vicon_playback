@@ -19,8 +19,7 @@ AcquisitionController::AcquisitionController():
     rqt_gui_cpp::Plugin(),
     widget_(0),
     recording_ac_("start_oni_vicon_recorder", true),
-    start_depth_sensor_ac_("start_depth_sensor", true),
-    close_depth_sensor_ac_("close_depth_sensor", true)
+    run_depth_sensor_ac_("run_depth_sensor", true)
 {   
     setObjectName("AcquisitionController");
 }
@@ -46,9 +45,18 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
     recorderViconItem->setText(0, "Vicon");
     recorderViconItem->setText(1, "Offline");
 
+    // depth sensor branch
     recorderKinectItem = new QTreeWidgetItem(recorderItem);
-    recorderKinectItem->setText(0, "Kinect/XTION");
-    recorderKinectItem->setText(1, "Closed");
+    recorderKinectItem->setText(0, "Depth Sensor");
+    recorderKinectDeviceTypeItem = new QTreeWidgetItem(recorderKinectItem);
+    recorderKinectDeviceTypeItem->setText(0, "Device Type");
+    recorderKinectDeviceNameItem = new QTreeWidgetItem(recorderKinectItem);
+    recorderKinectDeviceNameItem->setText(0, "Device Name");
+    recorderKinectResItem = new QTreeWidgetItem(recorderKinectItem);
+    recorderKinectResItem->setText(0, "Resolution");
+    recorderKinectFpsItem = new QTreeWidgetItem(recorderKinectItem);
+    recorderKinectFpsItem->setText(0, "FPS");
+    setDepthSensorClosesStatus();
 
     statusItem = new QTreeWidgetItem(ui_.statusTreeWidget);
     statusItem->setText(0, "Recording status");
@@ -104,39 +112,34 @@ void AcquisitionController::onStartRecording()
 
 void AcquisitionController::onStopRecording()
 {
-    recording_ac_.cancelGoal();
+    recording_ac_.cancelAllGoals();
     ROS_INFO("Stopping recording ...");
 }
 
 void AcquisitionController::onStartDepthSensor()
 {
-    ROS_INFO("Starting depth sensor device");
-    if(!start_depth_sensor_ac_.waitForServer(ros::Duration(0.5)))
+    ROS_INFO("Starting depth sensor");
+    if(!run_depth_sensor_ac_.waitForServer(ros::Duration(0.5)))
     {
         ROS_WARN("Timeout while connect to depth sensor node");
         return;
     }
 
+    recorderKinectItem->setText(1, "Connecting ...");
     ui_.startKinectButton->setEnabled(false);
     ui_.closeKinectButton->setEnabled(false);
 
-    start_depth_sensor_ac_.sendGoal(
-                oni_vicon_recorder::StartDepthSensorGoal(),
-                boost::bind(&AcquisitionController::startDepthSensorDoneCB, this, _1, _2));
+    run_depth_sensor_ac_.sendGoal(
+                oni_vicon_recorder::RunDepthSensorGoal(),
+                boost::bind(&AcquisitionController::startDepthSensorDoneCB, this, _1, _2),
+                boost::bind(&AcquisitionController::startDepthSensorActiveCB, this),
+                boost::bind(&AcquisitionController::startDepthSensorFeedbackCB, this, _1));
 }
 
 void AcquisitionController::onCloseDepthSensor()
 {
-    ROS_INFO("Closing depth sensor device");
-    if(!close_depth_sensor_ac_.waitForServer(ros::Duration(0.5)))
-    {
-        ROS_WARN("Timeout while connect to depth sensor node");
-        return;
-    }
-
-    close_depth_sensor_ac_.sendGoal(
-                oni_vicon_recorder::CloseDepthSensorGoal(),
-                boost::bind(&AcquisitionController::closeDepthSensorDoneCB, this, _1, _2));
+    run_depth_sensor_ac_.cancelAllGoals();
+    ROS_INFO("Closing depth sensor ...");
 }
 
 void AcquisitionController::onSelectDirectory()
@@ -153,7 +156,7 @@ void AcquisitionController::onSelectDirectory()
 void AcquisitionController::onGenerateRecordName()
 {
     QDateTime dateTime = QDateTime::currentDateTime();
-    ui_.recordNameLineEdit->setText("ObjectName_" + dateTime.toString("MMM-dd-yyyy_HH-mm"));
+    ui_.recordNameLineEdit->setText("ObjectName_" + dateTime.toString("MMM-dd-yyyy_HH-mm-ss"));
 }
 
 bool AcquisitionController::validateSettings()
@@ -188,7 +191,7 @@ void AcquisitionController::updateStatus()
     ui_.startRecordingButton->setEnabled(recording_ac_.isServerConnected()
                                          && !ui_.stopRecordingButton->isEnabled());
 
-    ui_.startKinectButton->setEnabled(start_depth_sensor_ac_.isServerConnected()
+    ui_.startKinectButton->setEnabled(run_depth_sensor_ac_.isServerConnected()
                                       && !ui_.closeKinectButton->isEnabled());
 }
 
@@ -222,6 +225,8 @@ void AcquisitionController::recordingFeedbackCB(
 
 void AcquisitionController::recordingActiveCB()
 {
+    ROS_INFO("Recording started...");
+
     ui_.startRecordingButton->setEnabled(false);
     ui_.stopRecordingButton->setEnabled(true);
 }
@@ -241,38 +246,58 @@ void AcquisitionController::recordingDoneCB(
     default:
         statusItem->setText(1, "Aborted");
     }
-
-    if(state.state_ == actionlib::SimpleClientGoalState::PENDING ||
-       state.state_ == actionlib::SimpleClientGoalState::ACTIVE)
-    {
-        ROS_INFO("Recording started...");
-    }
-    else
-    {
-        recording_ac_.cancelGoal();
-        ROS_INFO("Could not start recording.");
-    }
 }
 
 void AcquisitionController::startDepthSensorDoneCB(
         const actionlib::SimpleClientGoalState state,
-        const oni_vicon_recorder::StartDepthSensorResultConstPtr result)
-{
-    ui_.closeKinectButton->setEnabled(true);
-}
-
-void AcquisitionController::closeDepthSensorDoneCB(
-        const actionlib::SimpleClientGoalState state,
-        const oni_vicon_recorder::CloseDepthSensorResultConstPtr result)
+        const oni_vicon_recorder::RunDepthSensorResultConstPtr result)
 {
     ui_.startKinectButton->setEnabled(true);
     ui_.closeKinectButton->setEnabled(false);
+
+    setDepthSensorClosesStatus();
+    ROS_INFO("Depth sensor closed");
 }
 
+
+void AcquisitionController::startDepthSensorActiveCB()
+{
+    ui_.startKinectButton->setEnabled(false);
+    ui_.closeKinectButton->setEnabled(true);
+}
+
+void AcquisitionController::startDepthSensorFeedbackCB(
+        oni_vicon_recorder::RunDepthSensorFeedbackConstPtr feedback)
+{
+    recorderKinectItem->setText(1, "Running");
+
+    recorderKinectDeviceTypeItem->setText(1, feedback->device_type.c_str());
+    recorderKinectDeviceNameItem->setText(1, feedback->device_name.c_str());
+
+    std::ostringstream resStream;
+    resStream << feedback->res_x << "x" << feedback->res_y;
+    recorderKinectResItem->setText(1, resStream.str().c_str());
+
+    std::ostringstream fpsStream;
+    fpsStream << feedback->fps;
+    recorderKinectFpsItem->setText(1, fpsStream.str().c_str());
+}
+
+void AcquisitionController::setDepthSensorClosesStatus()
+{
+    recorderKinectItem->setText(1, "Closed");
+    recorderKinectDeviceTypeItem->setText(1, " - ");
+    recorderKinectDeviceNameItem->setText(1, " - ");
+    recorderKinectResItem->setText(1, " - x -");
+    recorderKinectFpsItem->setText(1, " - ");
+
+    recording_ac_.cancelAllGoals();
+}
 
 void AcquisitionController::shutdownPlugin()
 {
     recording_ac_.cancelAllGoals();
+    run_depth_sensor_ac_.cancelAllGoals();
 }
 
 PLUGINLIB_EXPORT_CLASS(rqt_acquisition_controller::AcquisitionController, rqt_gui_cpp::Plugin)

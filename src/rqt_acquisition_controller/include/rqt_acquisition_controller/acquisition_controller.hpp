@@ -14,6 +14,8 @@
 
 #include <oni_vicon_recorder/RecordAction.h>
 #include <oni_vicon_recorder/RunDepthSensorAction.h>
+#include <oni_vicon_recorder/ChangeDepthSensorModeAction.h>
+#include <oni_vicon_recorder/ConnectToViconAction.h>
 
 namespace rqt_acquisition_controller
 {
@@ -22,6 +24,21 @@ namespace rqt_acquisition_controller
     {
     Q_OBJECT
     public:
+        enum Section
+        {
+            SensorSection = 0x01,
+            SettingsSection = 0x02,
+            GlobalCalibrationSection = 0x04,
+            LocalCalibrationSection = 0x08,
+            RecordingSection = 0x10,
+            AllSections = SensorSection
+                          | SettingsSection
+                          | GlobalCalibrationSection
+                          | LocalCalibrationSection
+                          | RecordingSection
+        };
+
+
         /**
          * Groovy actionlib has a reported bug on reconnecting to an action server:
          *    @link https://github.com/ros/actionlib/issues/7
@@ -29,8 +46,17 @@ namespace rqt_acquisition_controller
          *
          * This issue has been fixed in Hydro.
          */
-        typedef actionlib::SimpleActionClient<oni_vicon_recorder::RecordAction> RecorderClient;
-        typedef actionlib::SimpleActionClient<oni_vicon_recorder::RunDepthSensorAction> RunDepthSensorClient;
+        typedef  actionlib::SimpleActionClient<oni_vicon_recorder::RecordAction>
+        RecorderClient;
+
+        typedef actionlib::SimpleActionClient<oni_vicon_recorder::RunDepthSensorAction>
+        RunDepthSensorClient;
+
+        typedef actionlib::SimpleActionClient<oni_vicon_recorder::ChangeDepthSensorModeAction>
+        ChangeDepthSensorModeClient;
+
+        typedef actionlib::SimpleActionClient<oni_vicon_recorder::ConnectToViconAction>
+        ConnectToViconClient;
 
         AcquisitionController();
         virtual void initPlugin(qt_gui_cpp::PluginContext& context);
@@ -41,6 +67,10 @@ namespace rqt_acquisition_controller
         void onStopRecording();
         void onStartDepthSensor();
         void onCloseDepthSensor();
+        void onApplyDepthSensorMode();
+        void onConnectToVicon();
+        void onDisconnectFromVicon();
+        void onSubmitSettings();
 
         void updateStatus();
         void updateFeedback(int vicon_frames, int kinect_frames);
@@ -52,7 +82,7 @@ namespace rqt_acquisition_controller
 
     private:
         bool validateSettings();
-        void setDepthSensorClosesStatus();
+        void setDepthSensorClosedStatus();
 
         void recordingActiveCB();
         void recordingDoneCB(
@@ -68,23 +98,43 @@ namespace rqt_acquisition_controller
         void startDepthSensorFeedbackCB(
                 oni_vicon_recorder::RunDepthSensorFeedbackConstPtr feedback);
 
+        void changeDepthSensorModeDoneCB(
+                const actionlib::SimpleClientGoalState state,
+                const oni_vicon_recorder::ChangeDepthSensorModeResultConstPtr result);
+
+        void connectToViconActiveCB();
+        void connectToViconDoneCB(
+                const actionlib::SimpleClientGoalState state,
+                const oni_vicon_recorder::ConnectToViconResultConstPtr result);
+        void connectToViconFeedbackCB(
+                oni_vicon_recorder::ConnectToViconFeedbackConstPtr feedback);
+
     private:
         Ui::AcquisitionController ui_;
         QWidget* widget_;
 
         RecorderClient recording_ac_;
         RunDepthSensorClient run_depth_sensor_ac_;
+        ChangeDepthSensorModeClient change_depth_sensor_mode_ac_;
+        ConnectToViconClient connect_to_vicon_ac_;
 
         QTreeWidgetItem* recorderItem;
         QTreeWidgetItem* recorderViconItem;
         QTreeWidgetItem* recorderKinectItem;
         QTreeWidgetItem* recorderKinectDeviceTypeItem;
         QTreeWidgetItem* recorderKinectDeviceNameItem;
-        QTreeWidgetItem* recorderKinectResItem;
-        QTreeWidgetItem* recorderKinectFpsItem;
+        QTreeWidgetItem* recorderDepthSensorModeItem;
         QTreeWidgetItem* statusItem;
         QTreeWidgetItem* recordedViconFramesItem;
         QTreeWidgetItem* recordedKinectFramesItem;
+
+        bool config_depth_sensor_running_;
+        bool config_vicon_connected_;
+        bool config_settings_applied_;
+        bool config_global_calib_completed_;
+        bool config_local_calib_completed_;
+        bool config_recording_;
+        bool config_all_;
     };
 
 }

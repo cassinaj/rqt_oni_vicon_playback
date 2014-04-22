@@ -48,13 +48,10 @@ namespace rqt_acquisition_controller
          */
         typedef  actionlib::SimpleActionClient<oni_vicon_recorder::RecordAction>
         RecorderClient;
-
         typedef actionlib::SimpleActionClient<oni_vicon_recorder::RunDepthSensorAction>
         RunDepthSensorClient;
-
         typedef actionlib::SimpleActionClient<oni_vicon_recorder::ChangeDepthSensorModeAction>
         ChangeDepthSensorModeClient;
-
         typedef actionlib::SimpleActionClient<oni_vicon_recorder::ConnectToViconAction>
         ConnectToViconClient;
 
@@ -71,6 +68,7 @@ namespace rqt_acquisition_controller
         void onConnectToVicon();
         void onDisconnectFromVicon();
         void onSubmitSettings();
+        void onToggleSingleObjectModel(bool single_model);
 
         void updateStatus();
         void updateFeedback(int vicon_frames, int kinect_frames);
@@ -128,6 +126,7 @@ namespace rqt_acquisition_controller
         QTreeWidgetItem* recordedViconFramesItem;
         QTreeWidgetItem* recordedKinectFramesItem;
 
+        bool config_use_single_model_;
         bool config_depth_sensor_running_;
         bool config_vicon_connected_;
         bool config_settings_applied_;

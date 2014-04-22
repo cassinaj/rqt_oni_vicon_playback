@@ -22,7 +22,7 @@ AcquisitionController::AcquisitionController():
     run_depth_sensor_ac_("run_depth_sensor", true),
     change_depth_sensor_mode_ac_("change_depth_sensor_mode", true),
     connect_to_vicon_ac_("connect_to_vicon", true)
-{   
+{
     setObjectName("AcquisitionController");
 }
 
@@ -83,11 +83,13 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
     connect(ui_.connectViconButton, SIGNAL(clicked()), this, SLOT(onConnectToVicon()));
     connect(ui_.disconnectViconButton, SIGNAL(clicked()), this, SLOT(onDisconnectFromVicon()));
     connect(ui_.submitSettingsButton, SIGNAL(clicked()), this, SLOT(onSubmitSettings()));
+    connect(ui_.singleObjectModelCheckBox, SIGNAL(toggled(bool)), this, SLOT(onToggleSingleObjectModel(bool)));
     connect(this, SIGNAL(feedbackReceived(int, int)), this, SLOT(updateFeedback(int, int)));
 
     config_depth_sensor_running_= false;
     config_vicon_connected_= false;
     config_settings_applied_= false;
+    config_use_single_model_ = false;
     config_global_calib_completed_= false;
     config_local_calib_completed_= false;
     config_recording_= false;
@@ -95,7 +97,7 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
 
     QTimer* timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(updateStatus()));
-    timer->start(50);
+    timer->start(40);
 }
 
 void AcquisitionController::onStartRecording()
@@ -206,6 +208,11 @@ void AcquisitionController::onSubmitSettings()
     ROS_INFO("Settings submitted");
 }
 
+void AcquisitionController::onToggleSingleObjectModel(bool single_model)
+{
+    config_use_single_model_ = single_model;
+}
+
 void AcquisitionController::onSelectDirectory()
 {
     QString dir = QFileDialog::getExistingDirectory(
@@ -274,11 +281,16 @@ void AcquisitionController::updateStatus()
     ui_.loadLocalCalibButton->setEnabled(config_global_calib_completed_);
 
     ui_.frameLevel_1->setEnabled(config_all_);
-    ui_.frameLevel_2->setEnabled(ui_.frameLevel_1->isEnabled() && config_depth_sensor_running_
+    ui_.frameLevel_2->setEnabled(ui_.frameLevel_1->isEnabled() && sensor_node_online
+                                                               && vicon_node_online
+                                                               && config_depth_sensor_running_
                                                                && config_vicon_connected_);
     ui_.frameLevel_3->setEnabled(ui_.frameLevel_2->isEnabled() && config_settings_applied_);
     ui_.frameLevel_4->setEnabled(ui_.frameLevel_3->isEnabled() && config_global_calib_completed_
                                                                && config_local_calib_completed_);
+
+    ui_.trackingObjetModelLineEdit->setEnabled(!config_use_single_model_);
+    ui_.singleObjectModelCheckBox->setChecked(config_use_single_model_);
 }
 
 void AcquisitionController::updateFeedback(int vicon_frames, int kinect_frames)
@@ -427,6 +439,7 @@ void AcquisitionController::shutdownPlugin()
     recording_ac_.cancelAllGoals();
     run_depth_sensor_ac_.cancelAllGoals();
     connect_to_vicon_ac_.cancelAllGoals();
+    change_depth_sensor_mode_ac_.cancelAllGoals();
 }
 
 PLUGINLIB_EXPORT_CLASS(rqt_acquisition_controller::AcquisitionController, rqt_gui_cpp::Plugin)

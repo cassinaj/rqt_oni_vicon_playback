@@ -246,9 +246,9 @@
              </widget>
             </item>
             <item row="7" column="1">
-             <widget class="QLineEdit" name="lineEdit_3">
+             <widget class="QLineEdit" name="trackingObjetModelLineEdit">
               <property name="enabled">
-               <bool>false</bool>
+               <bool>true</bool>
               </property>
               <property name="frame">
                <bool>true</bool>
@@ -291,7 +291,7 @@
              </widget>
             </item>
             <item row="6" column="1">
-             <widget class="QLineEdit" name="lineEdit_2">
+             <widget class="QLineEdit" name="displayObjetModelLineEdit">
               <property name="frame">
                <bool>true</bool>
               </property>
@@ -306,11 +306,17 @@
             </item>
             <item row="8" column="1">
              <widget class="QCheckBox" name="singleObjectModelCheckBox">
+              <property name="enabled">
+               <bool>true</bool>
+              </property>
               <property name="text">
                <string>Same as display model</string>
               </property>
-              <property name="checked">
+              <property name="checkable">
                <bool>true</bool>
+              </property>
+              <property name="checked">
+               <bool>false</bool>
               </property>
              </widget>
             </item>
@@ -334,7 +340,7 @@
             <item row="1" column="1">
              <widget class="QLineEdit" name="directoryLineEdit">
               <property name="enabled">
-               <bool>false</bool>
+               <bool>true</bool>
               </property>
               <property name="autoFillBackground">
                <bool>false</bool>

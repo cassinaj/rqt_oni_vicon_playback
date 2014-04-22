@@ -69,9 +69,8 @@ namespace rqt_acquisition_controller
         void onDisconnectFromVicon();
         void onSubmitSettings();
         void onToggleSingleObjectModel(bool single_model);
-
-        void updateStatus();
-        void updateFeedback(int vicon_frames, int kinect_frames);
+        void onUpdateStatus();
+        void oUpdateFeedback(int vicon_frames, int kinect_frames);
         void onSelectDirectory();
         void onGenerateRecordName();
 

@@ -84,7 +84,7 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
     connect(ui_.disconnectViconButton, SIGNAL(clicked()), this, SLOT(onDisconnectFromVicon()));
     connect(ui_.submitSettingsButton, SIGNAL(clicked()), this, SLOT(onSubmitSettings()));
     connect(ui_.singleObjectModelCheckBox, SIGNAL(toggled(bool)), this, SLOT(onToggleSingleObjectModel(bool)));
-    connect(this, SIGNAL(feedbackReceived(int, int)), this, SLOT(updateFeedback(int, int)));
+    connect(this, SIGNAL(feedbackReceived(int, int)), this, SLOT(oUpdateFeedback(int, int)));
 
     config_depth_sensor_running_= false;
     config_vicon_connected_= false;
@@ -96,9 +96,21 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
     config_all_= true;
 
     QTimer* timer = new QTimer(this);
-    connect(timer, SIGNAL(timeout()), this, SLOT(updateStatus()));
+    connect(timer, SIGNAL(timeout()), this, SLOT(onUpdateStatus()));
     timer->start(40);
 }
+
+void AcquisitionController::shutdownPlugin()
+{
+    recording_ac_.cancelAllGoals();
+    run_depth_sensor_ac_.cancelAllGoals();
+    connect_to_vicon_ac_.cancelAllGoals();
+    change_depth_sensor_mode_ac_.cancelAllGoals();
+}
+
+// ============================================================================================== //
+// == Slots ===================================================================================== //
+// ============================================================================================== //
 
 void AcquisitionController::onStartRecording()
 {
@@ -230,33 +242,8 @@ void AcquisitionController::onGenerateRecordName()
     ui_.recordNameLineEdit->setText("ObjectName_" + dateTime.toString("MMM-dd-yyyy_HH-mm-ss"));
 }
 
-bool AcquisitionController::validateSettings()
+void AcquisitionController::onUpdateStatus()
 {
-    if (ui_.directoryLineEdit->text().isEmpty())
-    {
-        QMessageBox msgBox;
-        msgBox.setText("Please select a directory!");
-        msgBox.setIcon(QMessageBox::Information);
-        msgBox.exec();
-
-        return false;
-    }
-
-    if (ui_.recordNameLineEdit->text().isEmpty())
-    {
-        QMessageBox msgBox;
-        msgBox.setText("Please enter a recording name!");
-        msgBox.setIcon(QMessageBox::Information);
-        msgBox.exec();
-
-        return false;
-    }
-
-    return true;
-}
-
-void AcquisitionController::updateStatus()
-{    
     bool sensor_node_online = run_depth_sensor_ac_.isServerConnected();
     bool vicon_node_online = connect_to_vicon_ac_.isServerConnected();
     bool recorder_node_online = recording_ac_.isServerConnected();
@@ -293,7 +280,7 @@ void AcquisitionController::updateStatus()
     ui_.singleObjectModelCheckBox->setChecked(config_use_single_model_);
 }
 
-void AcquisitionController::updateFeedback(int vicon_frames, int kinect_frames)
+void AcquisitionController::oUpdateFeedback(int vicon_frames, int kinect_frames)
 {
     static unsigned int dots = 0;
     static int last_frame = 0;
@@ -424,6 +411,10 @@ void AcquisitionController::connectToViconFeedbackCB(
     config_vicon_connected_ = feedback->connected;
 }
 
+// ============================================================================================== //
+// == Implementation details ==================================================================== //
+// ============================================================================================== //
+
 void AcquisitionController::setDepthSensorClosedStatus()
 {
     recorderKinectItem->setText(1, "Closed");
@@ -434,12 +425,29 @@ void AcquisitionController::setDepthSensorClosedStatus()
     recording_ac_.cancelAllGoals();
 }
 
-void AcquisitionController::shutdownPlugin()
+bool AcquisitionController::validateSettings()
 {
-    recording_ac_.cancelAllGoals();
-    run_depth_sensor_ac_.cancelAllGoals();
-    connect_to_vicon_ac_.cancelAllGoals();
-    change_depth_sensor_mode_ac_.cancelAllGoals();
+    if (ui_.directoryLineEdit->text().isEmpty())
+    {
+        QMessageBox msgBox;
+        msgBox.setText("Please select a directory!");
+        msgBox.setIcon(QMessageBox::Information);
+        msgBox.exec();
+
+        return false;
+    }
+
+    if (ui_.recordNameLineEdit->text().isEmpty())
+    {
+        QMessageBox msgBox;
+        msgBox.setText("Please enter a recording name!");
+        msgBox.setIcon(QMessageBox::Information);
+        msgBox.exec();
+
+        return false;
+    }
+
+    return true;
 }
 
 PLUGINLIB_EXPORT_CLASS(rqt_acquisition_controller::AcquisitionController, rqt_gui_cpp::Plugin)

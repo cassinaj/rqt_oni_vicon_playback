@@ -37,41 +37,51 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
     ui_.setupUi(widget_);
     context.addWidget(widget_);
 
-    // setup status tree
-    ui_.statusTreeWidget->setColumnCount(2);
-    recorderItem = new QTreeWidgetItem(ui_.statusTreeWidget);
-    recorderItem->setText(0, "Recorder");
-    recorderItem->setText(1, "Disconnected");
+    // build status tree
+    status_model_ = new QStandardItemModel;
+    root_item_ = status_model_->invisibleRootItem();
 
-    recorderViconItem = new QTreeWidgetItem(recorderItem);
-    recorderViconItem->setText(0, "Vicon");
-    recorderViconItem->setText(1, "Offline");
+    recorderItem = new QStandardItem();
+    recorderItem->setColumnCount(2);
 
-    // depth sensor branch
-    recorderKinectItem = new QTreeWidgetItem(recorderItem);
-    recorderKinectItem->setText(0, "Depth Sensor");
-    recorderKinectDeviceTypeItem = new QTreeWidgetItem(recorderKinectItem);
-    recorderKinectDeviceTypeItem->setText(0, "Device Type");
-    recorderKinectDeviceNameItem = new QTreeWidgetItem(recorderKinectItem);
-    recorderKinectDeviceNameItem->setText(0, "Device Name");
-    recorderDepthSensorModeItem = new QTreeWidgetItem(recorderKinectItem);
-    recorderDepthSensorModeItem->setText(0, "Mode");
-    setDepthSensorClosedStatus();
+    root_item_->appendRow(recorderItem);
 
-    statusItem = new QTreeWidgetItem(ui_.statusTreeWidget);
-    statusItem->setText(0, "Recording status");
-    statusItem->setText(1, "idle");
 
-    recordedViconFramesItem = new QTreeWidgetItem(ui_.statusTreeWidget);
-    recordedViconFramesItem->setText(0, "Recorded Vicon frames");
-    recordedViconFramesItem->setText(1, "0");
 
-    recordedKinectFramesItem = new QTreeWidgetItem(ui_.statusTreeWidget);
-    recordedKinectFramesItem->setText(0, "Recorded Kinect/XTION frames");
-    recordedKinectFramesItem->setText(1, "0");
+    //ui_.statusTreeView->setColumnCount(2);
+//    recorderItem = new QTreeWidgetItem(ui_.statusTreeWidget);
+//    recorderItem->setText(0, "Recorder");
+//    recorderItem->setText(1, "Disconnected");
 
-    ui_.statusTreeWidget->expandAll();
-    ui_.statusTreeWidget->resizeColumnToContents(0);   
+//    recorderViconItem = new QTreeWidgetItem(recorderItem);
+//    recorderViconItem->setText(0, "Vicon");
+//    recorderViconItem->setText(1, "Offline");
+
+//    // depth sensor branch
+//    recorderKinectItem = new QTreeWidgetItem(recorderItem);
+//    recorderKinectItem->setText(0, "Depth Sensor");
+//    recorderKinectDeviceTypeItem = new QTreeWidgetItem(recorderKinectItem);
+//    recorderKinectDeviceTypeItem->setText(0, "Device Type");
+//    recorderKinectDeviceNameItem = new QTreeWidgetItem(recorderKinectItem);
+//    recorderKinectDeviceNameItem->setText(0, "Device Name");
+//    recorderDepthSensorModeItem = new QTreeWidgetItem(recorderKinectItem);
+//    recorderDepthSensorModeItem->setText(0, "Mode");
+//    setDepthSensorClosedStatus();
+
+//    statusItem = new QTreeWidgetItem(ui_.statusTreeWidget);
+//    statusItem->setText(0, "Recording status");
+//    statusItem->setText(1, "idle");
+
+//    recordedViconFramesItem = new QTreeWidgetItem(ui_.statusTreeWidget);
+//    recordedViconFramesItem->setText(0, "Recorded Vicon frames");
+//    recordedViconFramesItem->setText(1, "0");
+
+//    recordedKinectFramesItem = new QTreeWidgetItem(ui_.statusTreeWidget);
+//    recordedKinectFramesItem->setText(0, "Recorded Kinect/XTION frames");
+//    recordedKinectFramesItem->setText(1, "0");
+
+    ui_.statusTreeView->expandAll();
+    ui_.statusTreeView->resizeColumnToContents(0);
 
     connect(ui_.startRecordingButton, SIGNAL(clicked()), this, SLOT(onStartRecording()));
     connect(ui_.stopRecordingButton, SIGNAL(clicked()), this, SLOT(onStopRecording()));
@@ -151,7 +161,7 @@ void AcquisitionController::onStartDepthSensor()
         return;
     }
 
-    recorderKinectItem->setText(1, "Connecting ...");
+//    recorderKinectItem->setText(1, "Connecting ...");
     ui_.startKinectButton->setEnabled(false);
     ui_.closeKinectButton->setEnabled(false);
 
@@ -248,7 +258,7 @@ void AcquisitionController::onUpdateStatus()
     bool vicon_node_online = connect_to_vicon_ac_.isServerConnected();
     bool recorder_node_online = recording_ac_.isServerConnected();
 
-    recorderItem->setText(1, recorder_node_online ? "Connected" : "Disconnected");
+//    recorderItem->setText(1, recorder_node_online ? "Connected" : "Disconnected");
 
     ui_.startKinectButton->setEnabled(sensor_node_online && !config_depth_sensor_running_);
     ui_.closeKinectButton->setEnabled(sensor_node_online && config_depth_sensor_running_);
@@ -289,17 +299,17 @@ void AcquisitionController::oUpdateFeedback(int vicon_frames, int kinect_frames)
         std::ostringstream statusStream;
         statusStream << "Recording ";
         statusStream << std::string(++dots % 4, '.');
-        statusItem->setText(1, statusStream.str().c_str());
+//        statusItem->setText(1, statusStream.str().c_str());
     }
     last_frame = kinect_frames;
 
     std::ostringstream viconFramesStream;
     viconFramesStream << vicon_frames;
-    recordedViconFramesItem->setText(1, viconFramesStream.str().c_str());
+//    recordedViconFramesItem->setText(1, viconFramesStream.str().c_str());
 
     std::ostringstream kinectFramesStream;
     kinectFramesStream << kinect_frames;
-    recordedKinectFramesItem->setText(1, kinectFramesStream.str().c_str());
+//    recordedKinectFramesItem->setText(1, kinectFramesStream.str().c_str());
 }
 
 // ============================================================================================== //
@@ -328,10 +338,10 @@ void AcquisitionController::recordingDoneCB(
     switch (state.state_)
     {
     case actionlib::SimpleClientGoalState::SUCCEEDED:
-        statusItem->setText(1, "Stopped");
+//        statusItem->setText(1, "Stopped");
         break;
-    default:
-        statusItem->setText(1, "Aborted");
+//    default:
+//        statusItem->setText(1, "Aborted");
     }
 }
 
@@ -355,11 +365,11 @@ void AcquisitionController::startDepthSensorActiveCB()
 void AcquisitionController::startDepthSensorFeedbackCB(
         oni_vicon_recorder::RunDepthSensorFeedbackConstPtr feedback)
 {
-    recorderKinectItem->setText(1, "Running");
+//    recorderKinectItem->setText(1, "Running");
 
-    recorderKinectDeviceTypeItem->setText(1, feedback->device_type.c_str());
-    recorderKinectDeviceNameItem->setText(1, feedback->device_name.c_str());
-    recorderDepthSensorModeItem->setText(1, feedback->mode.c_str());
+//    recorderKinectDeviceTypeItem->setText(1, feedback->device_type.c_str());
+//    recorderKinectDeviceNameItem->setText(1, feedback->device_name.c_str());
+//    recorderDepthSensorModeItem->setText(1, feedback->mode.c_str());
 
     // set modes
     ui_.deviceModeComboBox->clear();
@@ -383,8 +393,8 @@ void AcquisitionController::changeDepthSensorModeDoneCB(
     switch (state.state_)
     {
     case actionlib::SimpleClientGoalState::SUCCEEDED:
-        recorderDepthSensorModeItem->setText(1, ui_.deviceModeComboBox->itemText(
-                                                ui_.deviceModeComboBox->currentIndex()));
+//        recorderDepthSensorModeItem->setText(1, ui_.deviceModeComboBox->itemText(
+//                                                ui_.deviceModeComboBox->currentIndex()));
         ROS_INFO("%s", result->message.c_str());
         break;
     default:
@@ -417,10 +427,10 @@ void AcquisitionController::connectToViconFeedbackCB(
 
 void AcquisitionController::setDepthSensorClosedStatus()
 {
-    recorderKinectItem->setText(1, "Closed");
-    recorderKinectDeviceTypeItem->setText(1, " - ");
-    recorderKinectDeviceNameItem->setText(1, " - ");
-    recorderDepthSensorModeItem->setText(1, " - ");
+//    recorderKinectItem->setText(1, "Closed");
+//    recorderKinectDeviceTypeItem->setText(1, " - ");
+//    recorderKinectDeviceNameItem->setText(1, " - ");
+//    recorderDepthSensorModeItem->setText(1, " - ");
 
     recording_ac_.cancelAllGoals();
 }

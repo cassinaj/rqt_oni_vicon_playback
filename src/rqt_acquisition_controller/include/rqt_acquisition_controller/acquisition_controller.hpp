@@ -5,6 +5,8 @@
 
 #include <ui_acquisition_controller.h>
 #include <QWidget>
+#include <QStandardItem>
+#include <QStandardItemModel>
 #include <QListWidgetItem>
 #include <QTreeWidgetItem>
 
@@ -115,15 +117,18 @@ namespace rqt_acquisition_controller
         ChangeDepthSensorModeClient change_depth_sensor_mode_ac_;
         ConnectToViconClient connect_to_vicon_ac_;
 
-        QTreeWidgetItem* recorderItem;
-        QTreeWidgetItem* recorderViconItem;
-        QTreeWidgetItem* recorderKinectItem;
-        QTreeWidgetItem* recorderKinectDeviceTypeItem;
-        QTreeWidgetItem* recorderKinectDeviceNameItem;
-        QTreeWidgetItem* recorderDepthSensorModeItem;
-        QTreeWidgetItem* statusItem;
-        QTreeWidgetItem* recordedViconFramesItem;
-        QTreeWidgetItem* recordedKinectFramesItem;
+        QStandardItemModel* status_model_;
+        QStandardItem* root_item_;
+
+        QStandardItem* recorderItem;
+        QStandardItem* recorderViconItem;
+        QStandardItem* recorderKinectItem;
+        QStandardItem* recorderKinectDeviceTypeItem;
+        QStandardItem* recorderKinectDeviceNameItem;
+        QStandardItem* recorderDepthSensorModeItem;
+        QStandardItem* statusItem;
+        QStandardItem* recordedViconFramesItem;
+        QStandardItem* recordedKinectFramesItem;
 
         bool config_use_single_model_;
         bool config_depth_sensor_running_;

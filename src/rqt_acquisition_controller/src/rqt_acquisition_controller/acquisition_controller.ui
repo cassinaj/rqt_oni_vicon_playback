@@ -28,26 +28,14 @@
      <property name="title">
       <string>Status</string>
      </property>
-     <layout class="QGridLayout" name="gridLayout_5">
-      <item row="0" column="0">
-       <widget class="QTreeWidget" name="statusTreeWidget">
+     <layout class="QVBoxLayout" name="verticalLayout_6">
+      <item>
+       <widget class="QTreeView" name="statusTreeView">
         <property name="frameShape">
          <enum>QFrame::Box</enum>
         </property>
         <property name="frameShadow">
          <enum>QFrame::Plain</enum>
-        </property>
-        <property name="midLineWidth">
-         <number>0</number>
-        </property>
-        <property name="editTriggers">
-         <set>QAbstractItemView::NoEditTriggers</set>
-        </property>
-        <property name="alternatingRowColors">
-         <bool>true</bool>
-        </property>
-        <property name="autoExpandDelay">
-         <number>0</number>
         </property>
         <property name="animated">
          <bool>true</bool>
@@ -55,22 +43,9 @@
         <attribute name="headerVisible">
          <bool>false</bool>
         </attribute>
-        <attribute name="headerDefaultSectionSize">
-         <number>100</number>
-        </attribute>
         <attribute name="headerMinimumSectionSize">
          <number>100</number>
         </attribute>
-        <column>
-         <property name="text">
-          <string>subject</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>status</string>
-         </property>
-        </column>
        </widget>
       </item>
      </layout>

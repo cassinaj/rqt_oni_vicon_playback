@@ -13,7 +13,7 @@
 	 </group>
 	 -->
 	 <label>Vicon-Kinect/XTION Data Acquisition</label>
-	 <icon type="theme">system-help</icon>
+	 <icon type="theme">media-record</icon>
 	 <statustip>Woo Woo</statustip>
    </qtgui>
  </class>

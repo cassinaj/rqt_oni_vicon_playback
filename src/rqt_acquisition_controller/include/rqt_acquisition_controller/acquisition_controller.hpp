@@ -4,9 +4,13 @@
 #define RQT_ACQUISITION_CONTROLLER_PLUGIN_HPP
 
 #include <ui_acquisition_controller.h>
+
+#include <boost/thread/mutex.hpp>
+
 #include <QWidget>
 #include <QStandardItem>
 #include <QStandardItemModel>
+#include <QStringListModel>
 #include <QListWidgetItem>
 #include <QTreeWidgetItem>
 
@@ -26,18 +30,18 @@ namespace rqt_acquisition_controller
     {
     Q_OBJECT
     public:
-        enum Section
+        struct StatusItem
         {
-            SensorSection = 0x01,
-            SettingsSection = 0x02,
-            GlobalCalibrationSection = 0x04,
-            LocalCalibrationSection = 0x08,
-            RecordingSection = 0x10,
-            AllSections = SensorSection
-                          | SettingsSection
-                          | GlobalCalibrationSection
-                          | LocalCalibrationSection
-                          | RecordingSection
+            QStandardItem* object;
+            QStandardItem* status;
+
+            StatusItem& appendRow(StatusItem& status_item)
+            {
+                object->appendRow(QList<QStandardItem *>() << status_item.object
+                                                           << status_item.status);
+
+                return *this;
+            }
         };
 
 
@@ -70,7 +74,7 @@ namespace rqt_acquisition_controller
         void onConnectToVicon();
         void onDisconnectFromVicon();
         void onSubmitSettings();
-        void onToggleSingleObjectModel(bool single_model);
+        void onToggleSameModel(bool single_model);
         void onUpdateStatus();
         void oUpdateFeedback(int vicon_frames, int kinect_frames);
         void onSelectDirectory();
@@ -79,10 +83,7 @@ namespace rqt_acquisition_controller
     signals:
         void feedbackReceived(int vicon_frames, int kinect_frames);
 
-    private:
-        bool validateSettings();
-        void setDepthSensorClosedStatus();
-
+    private: /* Action callbacks */
         void recordingActiveCB();
         void recordingDoneCB(
                 const actionlib::SimpleClientGoalState state,
@@ -108,38 +109,34 @@ namespace rqt_acquisition_controller
         void connectToViconFeedbackCB(
                 oni_vicon_recorder::ConnectToViconFeedbackConstPtr feedback);
 
+    private: /* implementation details */
+        bool validateSettings();
+        void setDepthSensorClosedStatus();
+
+        StatusItem& statusItem(std::string item_name);
+        StatusItem& statusTreeRoot(QStandardItem *root);
+        QList<QStandardItem*> statusRow(std::string item_name);
+        StatusItem& createStatusRow(std::string object_text, std::string status_text = "");
+
+        void setActivity(std::string section_name, bool active);
+        bool isActive(std::string section_name);
+
     private:
         Ui::AcquisitionController ui_;
         QWidget* widget_;
 
+        // action clients
         RecorderClient recording_ac_;
         RunDepthSensorClient run_depth_sensor_ac_;
         ChangeDepthSensorModeClient change_depth_sensor_mode_ac_;
         ConnectToViconClient connect_to_vicon_ac_;
 
-        QStandardItemModel* status_model_;
-        QStandardItem* root_item_;
+        QTimer* timer_;
+        QStandardItemModel* status_model_;                
+        std::map<std::string, StatusItem> status_tree_container_;
 
-        QStandardItem* recorderItem;
-        QStandardItem* recorderViconItem;
-        QStandardItem* recorderKinectItem;
-        QStandardItem* recorderKinectDeviceTypeItem;
-        QStandardItem* recorderKinectDeviceNameItem;
-        QStandardItem* recorderDepthSensorModeItem;
-        QStandardItem* statusItem;
-        QStandardItem* recordedViconFramesItem;
-        QStandardItem* recordedKinectFramesItem;
-
-        bool config_use_single_model_;
-        bool config_depth_sensor_running_;
-        bool config_vicon_connected_;
-        bool config_settings_applied_;
-        bool config_global_calib_completed_;
-        bool config_local_calib_completed_;
-        bool config_recording_;
-        bool config_all_;
+        std::map<std::string, bool> activity_status_map_;
     };
-
 }
 
 #endif

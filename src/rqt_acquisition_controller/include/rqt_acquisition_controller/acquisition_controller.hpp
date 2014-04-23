@@ -23,6 +23,8 @@
 #include <oni_vicon_recorder/ChangeDepthSensorModeAction.h>
 #include <oni_vicon_recorder/ConnectToViconAction.h>
 
+//#define USING_ACTION()
+
 namespace rqt_acquisition_controller
 {
     class AcquisitionController:
@@ -44,7 +46,6 @@ namespace rqt_acquisition_controller
             }
         };
 
-
         /**
          * Groovy actionlib has a reported bug on reconnecting to an action server:
          *    @link https://github.com/ros/actionlib/issues/7
@@ -64,6 +65,11 @@ namespace rqt_acquisition_controller
         AcquisitionController();
         virtual void initPlugin(qt_gui_cpp::PluginContext& context);
         virtual void shutdownPlugin();
+        virtual void saveSettings(qt_gui_cpp::Settings& plugin_settings,
+                                  qt_gui_cpp::Settings& instance_settings) const;
+        virtual void restoreSettings(const qt_gui_cpp::Settings& plugin_settings,
+                                     const qt_gui_cpp::Settings& instance_settings);
+
 
     private slots:
         void onStartRecording();
@@ -113,6 +119,7 @@ namespace rqt_acquisition_controller
         bool validateSettings();
         void setDepthSensorClosedStatus();
 
+        // fluent interface to simplify things
         StatusItem& statusItem(std::string item_name);
         StatusItem& statusTreeRoot(QStandardItem *root);
         QList<QStandardItem*> statusRow(std::string item_name);

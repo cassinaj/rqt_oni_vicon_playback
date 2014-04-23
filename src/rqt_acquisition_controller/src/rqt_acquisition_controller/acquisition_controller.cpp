@@ -39,8 +39,6 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
     ui_.setupUi(widget_);
     context.addWidget(widget_);
 
-    //QIcon::fromTheme("view-refresh")
-
     // create status tree items
     status_model_ = new QStandardItemModel(widget_);
     statusTreeRoot(status_model_->invisibleRootItem())
@@ -84,7 +82,7 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
     setActivity("globally-calibrated", false);
     setActivity("locally-calibrated", false);
     setActivity("recording", false);
-    setActivity("global-action-pending", true);
+    setActivity("global-action-pending", false);
 
     timer_->start(40);
 }
@@ -103,6 +101,16 @@ void AcquisitionController::shutdownPlugin()
     if (isActive("depth-sensor-running")) run_depth_sensor_ac_.waitForResult(ros::Duration(200));
     if (isActive("vicon-connected")) connect_to_vicon_ac_.waitForResult(ros::Duration(200));
     if (isActive("changing-mode")) change_depth_sensor_mode_ac_.waitForResult(ros::Duration(200));
+}
+
+void AcquisitionController::saveSettings(qt_gui_cpp::Settings& plugin_settings,
+                                         qt_gui_cpp::Settings& instance_settings) const
+{
+}
+
+void AcquisitionController::restoreSettings(const qt_gui_cpp::Settings& plugin_settings,
+                                            const qt_gui_cpp::Settings& instance_settings)
+{
 }
 
 // ============================================================================================== //
@@ -175,10 +183,9 @@ void AcquisitionController::onApplyDepthSensorMode()
     }
 
     oni_vicon_recorder::ChangeDepthSensorModeGoal goal;
-    goal.mode = ui_.deviceModeComboBox->itemText(
-                    ui_.deviceModeComboBox->currentIndex()).toStdString();
+    goal.mode = ui_.deviceModeComboBox->currentText().toStdString();
 
-    setActivity("global-action-pending", false);
+    setActivity("global-action-pending", true);
 
     change_depth_sensor_mode_ac_.sendGoal(
                 goal,
@@ -266,7 +273,7 @@ void AcquisitionController::onUpdateStatus()
     ui_.localCalibProgressBar->setEnabled(isActive("globally-calibrated"));
     ui_.loadLocalCalibButton->setEnabled(isActive("globally-calibrated"));
 
-    ui_.frameLevel_1->setEnabled(isActive("global-action-pending"));
+    ui_.frameLevel_1->setEnabled(!isActive("global-action-pending"));
     ui_.frameLevel_2->setEnabled(ui_.frameLevel_1->isEnabled() && sensor_node_online
                                                                && vicon_node_online
                                                                && isActive("depth-sensor-running")
@@ -334,8 +341,6 @@ void AcquisitionController::recordingDoneCB(
     default:
         statusItem("Recording status").status->setText("Aborted");
     }
-
-
 }
 
 void AcquisitionController::startDepthSensorActiveCB()
@@ -393,7 +398,7 @@ void AcquisitionController::changeDepthSensorModeDoneCB(
         ROS_WARN("%s", result->message.c_str());
     }
 
-    setActivity("global-action-pending", true);
+    setActivity("global-action-pending", false);
     setActivity("changing-mode", false);
 }
 

@@ -18,12 +18,16 @@
 #include <rqt_gui_cpp/plugin.h>
 #include <actionlib/client/simple_action_client.h>
 
+#include <oni_vicon_recorder/ViconObjects.h>
+
 #include <oni_vicon_recorder/RecordAction.h>
 #include <oni_vicon_recorder/RunDepthSensorAction.h>
 #include <oni_vicon_recorder/ChangeDepthSensorModeAction.h>
 #include <oni_vicon_recorder/ConnectToViconAction.h>
 
-//#define USING_ACTION()
+#include <rqt_acquisition_controller/action_helper.hpp>
+
+
 
 namespace rqt_acquisition_controller
 {
@@ -31,6 +35,19 @@ namespace rqt_acquisition_controller
         public rqt_gui_cpp::Plugin
     {
     Q_OBJECT
+
+    /**
+     * Groovy actionlib has a reported bug on reconnecting to an action server:
+     *    @link https://github.com/ros/actionlib/issues/7
+     * The Client is not able to reconnect and stay connected!
+     *
+     * This issue has been fixed in Hydro.
+     */
+    ACTION_IMPLEMENT(oni_vicon_recorder, Record)
+    ACTION_IMPLEMENT(oni_vicon_recorder, RunDepthSensor)
+    ACTION_IMPLEMENT(oni_vicon_recorder, ConnectToVicon)
+    ACTION_IMPLEMENT(oni_vicon_recorder, ChangeDepthSensorMode)
+
     public:
         struct StatusItem
         {
@@ -46,22 +63,6 @@ namespace rqt_acquisition_controller
             }
         };
 
-        /**
-         * Groovy actionlib has a reported bug on reconnecting to an action server:
-         *    @link https://github.com/ros/actionlib/issues/7
-         * The Client is not able to reconnect and stay connected!
-         *
-         * This issue has been fixed in Hydro.
-         */
-        typedef  actionlib::SimpleActionClient<oni_vicon_recorder::RecordAction>
-        RecorderClient;
-        typedef actionlib::SimpleActionClient<oni_vicon_recorder::RunDepthSensorAction>
-        RunDepthSensorClient;
-        typedef actionlib::SimpleActionClient<oni_vicon_recorder::ChangeDepthSensorModeAction>
-        ChangeDepthSensorModeClient;
-        typedef actionlib::SimpleActionClient<oni_vicon_recorder::ConnectToViconAction>
-        ConnectToViconClient;
-
         AcquisitionController();
         virtual void initPlugin(qt_gui_cpp::PluginContext& context);
         virtual void shutdownPlugin();
@@ -69,7 +70,6 @@ namespace rqt_acquisition_controller
                                   qt_gui_cpp::Settings& instance_settings) const;
         virtual void restoreSettings(const qt_gui_cpp::Settings& plugin_settings,
                                      const qt_gui_cpp::Settings& instance_settings);
-
 
     private slots:
         void onStartRecording();
@@ -85,35 +85,10 @@ namespace rqt_acquisition_controller
         void oUpdateFeedback(int vicon_frames, int kinect_frames);
         void onSelectDirectory();
         void onGenerateRecordName();
+        void onDetectViconObjects();
 
     signals:
         void feedbackReceived(int vicon_frames, int kinect_frames);
-
-    private: /* Action callbacks */
-        void recordingActiveCB();
-        void recordingDoneCB(
-                const actionlib::SimpleClientGoalState state,
-                const oni_vicon_recorder::RecordResultConstPtr result);
-        void recordingFeedbackCB(
-                oni_vicon_recorder::RecordFeedbackConstPtr feedback);
-
-        void startDepthSensorActiveCB();
-        void startDepthSensorDoneCB(
-                const actionlib::SimpleClientGoalState state,
-                const oni_vicon_recorder::RunDepthSensorResultConstPtr result);
-        void startDepthSensorFeedbackCB(
-                oni_vicon_recorder::RunDepthSensorFeedbackConstPtr feedback);
-
-        void changeDepthSensorModeDoneCB(
-                const actionlib::SimpleClientGoalState state,
-                const oni_vicon_recorder::ChangeDepthSensorModeResultConstPtr result);
-
-        void connectToViconActiveCB();
-        void connectToViconDoneCB(
-                const actionlib::SimpleClientGoalState state,
-                const oni_vicon_recorder::ConnectToViconResultConstPtr result);
-        void connectToViconFeedbackCB(
-                oni_vicon_recorder::ConnectToViconFeedbackConstPtr feedback);
 
     private: /* implementation details */
         bool validateSettings();
@@ -132,17 +107,13 @@ namespace rqt_acquisition_controller
         Ui::AcquisitionController ui_;
         QWidget* widget_;
 
-        // action clients
-        RecorderClient recording_ac_;
-        RunDepthSensorClient run_depth_sensor_ac_;
-        ChangeDepthSensorModeClient change_depth_sensor_mode_ac_;
-        ConnectToViconClient connect_to_vicon_ac_;
-
         QTimer* timer_;
         QStandardItemModel* status_model_;                
         std::map<std::string, StatusItem> status_tree_container_;
 
         std::map<std::string, bool> activity_status_map_;
+
+        ros::ServiceClient vicon_object_sc_;
     };
 }
 

@@ -16,6 +16,7 @@ set(rqt_acquisition_controller_SOURCES
 
 set(rqt_acquisition_controller_HEADERS
   include/rqt_acquisition_controller/acquisition_controller.hpp
+  include/rqt_acquisition_controller/action_helper.hpp
 )
 
 set(rqt_acquisition_controller_UIS

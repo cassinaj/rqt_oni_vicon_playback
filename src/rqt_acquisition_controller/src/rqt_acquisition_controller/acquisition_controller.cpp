@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <cstdlib>
 
 #include <pluginlib/class_list_macros.h>
 
@@ -20,10 +21,10 @@ using namespace rqt_acquisition_controller;
 AcquisitionController::AcquisitionController():
     rqt_gui_cpp::Plugin(),
     widget_(0),
-    recording_ac_("start_oni_vicon_recorder", true),
-    run_depth_sensor_ac_("run_depth_sensor", true),
-    change_depth_sensor_mode_ac_("change_depth_sensor_mode", true),
-    connect_to_vicon_ac_("connect_to_vicon", true)
+    ACTION(Record)("start_oni_vicon_recorder", true),
+    ACTION(RunDepthSensor)("run_depth_sensor", true),
+    ACTION(ChangeDepthSensorMode)("change_depth_sensor_mode", true),
+    ACTION(ConnectToVicon)("connect_to_vicon", true)
 {
     setObjectName("AcquisitionController");
 }
@@ -69,6 +70,7 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
     connect(ui_.disconnectViconButton, SIGNAL(clicked()), this, SLOT(onDisconnectFromVicon()));
     connect(ui_.submitSettingsButton, SIGNAL(clicked()), this, SLOT(onSubmitSettings()));
     connect(ui_.sameModelCheckBox, SIGNAL(toggled(bool)), this, SLOT(onToggleSameModel(bool)));
+    connect(ui_.detectObjectNameButton, SIGNAL(clicked()), this, SLOT(onDetectViconObjects()));
     connect(this, SIGNAL(feedbackReceived(int, int)), this, SLOT(oUpdateFeedback(int, int)));
     connect(timer_, SIGNAL(timeout()), this, SLOT(onUpdateStatus()));
 
@@ -91,26 +93,63 @@ void AcquisitionController::shutdownPlugin()
 {
     timer_->stop();
 
-    recording_ac_.cancelAllGoals();
-    run_depth_sensor_ac_.cancelAllGoals();
-    connect_to_vicon_ac_.cancelAllGoals();
-    change_depth_sensor_mode_ac_.cancelAllGoals();
+    ACTION(Record).cancelAllGoals();
+    ACTION(RunDepthSensor).cancelAllGoals();
+    ACTION(ConnectToVicon).cancelAllGoals();
+    ACTION(ChangeDepthSensorMode).cancelAllGoals();
 
     // avoid "done" callbacks during destructor
-    if (isActive("recording")) recording_ac_.waitForResult(ros::Duration(200));
-    if (isActive("depth-sensor-running")) run_depth_sensor_ac_.waitForResult(ros::Duration(200));
-    if (isActive("vicon-connected")) connect_to_vicon_ac_.waitForResult(ros::Duration(200));
-    if (isActive("changing-mode")) change_depth_sensor_mode_ac_.waitForResult(ros::Duration(200));
+    if (isActive("recording")) ACTION(Record).waitForResult(ros::Duration(200));
+    if (isActive("depth-sensor-running")) ACTION(RunDepthSensor).waitForResult(ros::Duration(200));
+    if (isActive("vicon-connected")) ACTION(ConnectToVicon).waitForResult(ros::Duration(200));
+    if (isActive("changing-mode")) ACTION(ChangeDepthSensorMode).waitForResult(ros::Duration(200));
 }
 
 void AcquisitionController::saveSettings(qt_gui_cpp::Settings& plugin_settings,
                                          qt_gui_cpp::Settings& instance_settings) const
 {
+    instance_settings.setValue("vicon_host", ui_.viconHostIpLineEdit->text());
+    instance_settings.setValue("vicon_multicast_enabled", ui_.viconMultiCastCheckBox->isChecked());
+    instance_settings.setValue("vicon_multicast_address", ui_.viconMultiCastLineEdit->text());
+
+    instance_settings.setValue("settings_object_name", ui_.viconObjectsComboBox->currentText());
+    instance_settings.setValue("settings_record_directory", ui_.directoryLineEdit->text());
+    instance_settings.setValue("settings_record_name", ui_.recordNameLineEdit->text());
+    instance_settings.setValue("settings_model_package", ui_.objectModelPackageLineEdit->text());
+    instance_settings.setValue("settings_display_model", ui_.displayObjetModelLineEdit->text());
+    instance_settings.setValue("settings_tracking_model", ui_.trackingObjetModelLineEdit->text());
+    instance_settings.setValue("settings_use_same_model", ui_.sameModelCheckBox->isChecked());
 }
 
 void AcquisitionController::restoreSettings(const qt_gui_cpp::Settings& plugin_settings,
                                             const qt_gui_cpp::Settings& instance_settings)
 {
+    ui_.viconHostIpLineEdit->setText(
+                instance_settings.value("vicon_host", "localhost:801").toString());
+    ui_.viconMultiCastCheckBox->setChecked(
+                instance_settings.value("vicon_multicast_enabled", false).toBool());
+    ui_.viconMultiCastLineEdit->setText(
+                instance_settings.value("vicon_multicast_address", "244.0.0.0:44801").toString());
+
+    ui_.viconObjectsComboBox->addItem(
+                instance_settings.value("settings_object_name", "").toString());
+    ui_.viconObjectsComboBox->setCurrentIndex(
+                ui_.viconObjectsComboBox->findText(
+                    instance_settings.value("settings_object_name", "").toString()));
+    std::string default_dir = "/home/";
+    default_dir += getenv("USER");
+    QString cfg_value = instance_settings.value("settings_record_directory", "").toString();
+    ui_.directoryLineEdit->setText(cfg_value.isEmpty() ? default_dir.c_str() : cfg_value);
+    ui_.recordNameLineEdit->setText(
+                instance_settings.value("settings_record_name", "").toString());
+    ui_.objectModelPackageLineEdit->setText(
+                instance_settings.value("settings_model_package", "").toString());
+    ui_.displayObjetModelLineEdit->setText(
+                instance_settings.value("settings_display_model", "").toString());
+    ui_.trackingObjetModelLineEdit->setText(
+                instance_settings.value("settings_tracking_model", "").toString());
+    ui_.sameModelCheckBox->setChecked(
+                instance_settings.value("settings_use_same_model", false).toBool());
 }
 
 // ============================================================================================== //
@@ -126,24 +165,21 @@ void AcquisitionController::onStartRecording()
     }
 
     ROS_INFO("Initiate recording");
-    if(!recording_ac_.waitForServer(ros::Duration(0.5)))
+    if(!ACTION(Record).waitForServer(ros::Duration(0.5)))
     {
         ROS_WARN("Timeout while connect to recording node");
         return;
     }
 
     oni_vicon_recorder::RecordGoal recording_goal;
-    recording_goal.destination = ui_.directoryLineEdit->text().toStdString();
-    recording_goal.name = ui_.recordNameLineEdit->text().toStdString();
-    recording_ac_.sendGoal(recording_goal,
-                           boost::bind(&AcquisitionController::recordingDoneCB, this, _1, _2),
-                           boost::bind(&AcquisitionController::recordingActiveCB, this),
-                           boost::bind(&AcquisitionController::recordingFeedbackCB, this, _1));
+    ACTION_GOAL(Record).destination = ui_.directoryLineEdit->text().toStdString();
+    ACTION_GOAL(Record).name = ui_.recordNameLineEdit->text().toStdString();
+    ACTION_SEND_GOAL(AcquisitionController, oni_vicon_recorder, Record);
 }
 
 void AcquisitionController::onStopRecording()
 {
-    recording_ac_.cancelAllGoals();
+    ACTION(Record).cancelAllGoals();
     ROS_INFO("Stopping recording ...");
 }
 
@@ -152,44 +188,35 @@ void AcquisitionController::onStartDepthSensor()
     setActivity("depth-sensor-starting", true);
 
     ROS_INFO("Starting depth sensor");
-    if(!run_depth_sensor_ac_.waitForServer(ros::Duration(0.5)))
+    if(!ACTION(RunDepthSensor).waitForServer(ros::Duration(0.5)))
     {
         ROS_WARN("Timeout while connect to depth sensor node");
         return;
     }
 
     statusItem("Depth Sensor").status->setText("Connecting ...");
-
-    run_depth_sensor_ac_.sendGoal(
-                oni_vicon_recorder::RunDepthSensorGoal(),
-                boost::bind(&AcquisitionController::startDepthSensorDoneCB, this, _1, _2),
-                boost::bind(&AcquisitionController::startDepthSensorActiveCB, this),
-                boost::bind(&AcquisitionController::startDepthSensorFeedbackCB, this, _1));
+    ACTION_SEND_GOAL(AcquisitionController, oni_vicon_recorder, RunDepthSensor);
 }
 
 void AcquisitionController::onCloseDepthSensor()
 {
-    run_depth_sensor_ac_.cancelAllGoals();
+    ACTION(RunDepthSensor).cancelAllGoals();
     ROS_INFO("Closing depth sensor ...");
 }
 
 void AcquisitionController::onApplyDepthSensorMode()
 {
     ROS_INFO("Changing sensor mode.");
-    if(!change_depth_sensor_mode_ac_.waitForServer(ros::Duration(0.5)))
+    if(!ACTION(ChangeDepthSensorMode).waitForServer(ros::Duration(0.5)))
     {
         ROS_WARN("Timeout while connect to depth sensor node");
         return;
-    }
-
-    oni_vicon_recorder::ChangeDepthSensorModeGoal goal;
-    goal.mode = ui_.deviceModeComboBox->currentText().toStdString();
+    }    
 
     setActivity("global-action-pending", true);
 
-    change_depth_sensor_mode_ac_.sendGoal(
-                goal,
-                boost::bind(&AcquisitionController::changeDepthSensorModeDoneCB, this, _1, _2));
+    ACTION_GOAL(ChangeDepthSensorMode).mode = ui_.deviceModeComboBox->currentText().toStdString();
+    ACTION_SEND_GOAL(AcquisitionController, oni_vicon_recorder, ChangeDepthSensorMode);
 
     setActivity("changing-mode", true);
 }
@@ -197,25 +224,22 @@ void AcquisitionController::onApplyDepthSensorMode()
 void AcquisitionController::onConnectToVicon()
 {
     ROS_INFO("Connecting to Vicon system");
-    if(!connect_to_vicon_ac_.waitForServer(ros::Duration(0.5)))
+    if(!ACTION(ConnectToVicon).waitForServer(ros::Duration(0.5)))
     {
         ROS_WARN("Timeout while connect to vicon node");
         return;
     }
 
-    oni_vicon_recorder::ConnectToViconGoal goal;
-    goal.retry = 3;
-
-    connect_to_vicon_ac_.sendGoal(
-                goal,
-                boost::bind(&AcquisitionController::connectToViconDoneCB, this, _1, _2),
-                boost::bind(&AcquisitionController::connectToViconActiveCB, this),
-                boost::bind(&AcquisitionController::connectToViconFeedbackCB, this, _1));
+    ACTION_GOAL(ConnectToVicon).retry = 3;
+    ACTION_GOAL(ConnectToVicon).host = ui_.viconHostIpLineEdit->text().toStdString();
+    ACTION_GOAL(ConnectToVicon).multicast_address =ui_.viconMultiCastLineEdit->text().toStdString();
+    ACTION_GOAL(ConnectToVicon).enable_multicast = ui_.viconMultiCastCheckBox->isChecked();
+    ACTION_SEND_GOAL(AcquisitionController, oni_vicon_recorder, ConnectToVicon);
 }
 
 void AcquisitionController::onDisconnectFromVicon()
 {
-    connect_to_vicon_ac_.cancelAllGoals();
+    ACTION(ConnectToVicon).cancelAllGoals();
 }
 
 void AcquisitionController::onSubmitSettings()
@@ -237,7 +261,10 @@ void AcquisitionController::onSelectDirectory()
                 "~/",
                 QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
 
-    ui_.directoryLineEdit->setText(dir);
+    if (!dir.isEmpty())
+    {
+        ui_.directoryLineEdit->setText(dir);
+    }
 }
 
 void AcquisitionController::onGenerateRecordName()
@@ -246,11 +273,25 @@ void AcquisitionController::onGenerateRecordName()
     ui_.recordNameLineEdit->setText("ObjectName_" + dateTime.toString("MMM-dd-yyyy_HH-mm-ss"));
 }
 
+void AcquisitionController::onDetectViconObjects()
+{
+    oni_vicon_recorder::ViconObjects vicon_objects;
+    if (ros::service::call("detect_vicon_objects", vicon_objects))
+    {
+        ui_.viconObjectsComboBox->clear();
+        ui_.viconObjectsComboBox->addItem("");
+        for (int i = 0; i < vicon_objects.response.object_names.size(); i++)
+        {
+            ui_.viconObjectsComboBox->addItem(vicon_objects.response.object_names[i].c_str());
+        }
+    }
+}
+
 void AcquisitionController::onUpdateStatus()
 {
-    bool sensor_node_online = run_depth_sensor_ac_.isServerConnected();
-    bool vicon_node_online = connect_to_vicon_ac_.isServerConnected();
-    bool recorder_node_online = recording_ac_.isServerConnected();
+    bool sensor_node_online = ACTION(RunDepthSensor).isServerConnected();
+    bool vicon_node_online = ACTION(ConnectToVicon).isServerConnected();
+    bool recorder_node_online = ACTION(Record).isServerConnected();
 
     statusItem("Recorder").status->setText(recorder_node_online ? "Connected" : "Disconnected");
 
@@ -263,6 +304,11 @@ void AcquisitionController::onUpdateStatus()
 
     ui_.connectViconButton->setEnabled(vicon_node_online && !isActive("vicon-connected"));
     ui_.disconnectViconButton->setEnabled(vicon_node_online && isActive("vicon-connected"));
+
+    ui_.viconHostIpLineEdit->setEnabled(!isActive("vicon-connected"));
+    ui_.viconMultiCastCheckBox->setEnabled(!isActive("vicon-connected"));
+    ui_.viconMultiCastLineEdit->setEnabled(ui_.viconMultiCastCheckBox->isChecked()
+                                           && !isActive("vicon-connected"));
 
     ui_.startRecordingButton->setEnabled(recorder_node_online && !isActive("recording"));
     ui_.stopRecordingButton->setEnabled(recorder_node_online && isActive("recording"));
@@ -315,23 +361,19 @@ void AcquisitionController::oUpdateFeedback(int vicon_frames, int kinect_frames)
 // ============================================================================================== //
 // == Action callbacks ========================================================================== //
 // ============================================================================================== //
+ACTION_ON_ACTIVE(AcquisitionController, oni_vicon_recorder, Record)
+{
+    ROS_INFO("Recording started...");
+}
 
-void AcquisitionController::recordingFeedbackCB(
-        oni_vicon_recorder::RecordFeedbackConstPtr feedback)
+ACTION_ON_FEEDBACK(AcquisitionController, oni_vicon_recorder, Record)
 {    
     setActivity("recording", true);
 
     emit feedbackReceived(feedback->vicon_frames, feedback->kinect_frames);
 }
 
-void AcquisitionController::recordingActiveCB()
-{
-    ROS_INFO("Recording started...");
-}
-
-void AcquisitionController::recordingDoneCB(
-        const actionlib::SimpleClientGoalState state,
-        const oni_vicon_recorder::RecordResultConstPtr result)
+ACTION_ON_DONE(AcquisitionController, oni_vicon_recorder, Record)
 {    
     switch (state.state_)
     {
@@ -343,12 +385,9 @@ void AcquisitionController::recordingDoneCB(
     }
 }
 
-void AcquisitionController::startDepthSensorActiveCB()
-{    
-}
+ACTION_ON_ACTIVE(AcquisitionController, oni_vicon_recorder, RunDepthSensor) {  }
 
-void AcquisitionController::startDepthSensorFeedbackCB(
-        oni_vicon_recorder::RunDepthSensorFeedbackConstPtr feedback)
+ACTION_ON_FEEDBACK(AcquisitionController, oni_vicon_recorder, RunDepthSensor)
 {
     statusItem("Depth Sensor").status->setText("Running");
 
@@ -372,20 +411,21 @@ void AcquisitionController::startDepthSensorFeedbackCB(
     setActivity("depth-sensor-running", true);
 }
 
-void AcquisitionController::startDepthSensorDoneCB(
-        const actionlib::SimpleClientGoalState state,
-        const oni_vicon_recorder::RunDepthSensorResultConstPtr result)
+ACTION_ON_DONE(AcquisitionController, oni_vicon_recorder, RunDepthSensor)
 {
     ui_.deviceModeComboBox->clear();
     setDepthSensorClosedStatus();
+
     ROS_INFO("Depth sensor closed");
 
     setActivity("depth-sensor-running", false);
 }
 
-void AcquisitionController::changeDepthSensorModeDoneCB(
-        const actionlib::SimpleClientGoalState state,
-        const oni_vicon_recorder::ChangeDepthSensorModeResultConstPtr result)
+ACTION_ON_ACTIVE(AcquisitionController, oni_vicon_recorder, ChangeDepthSensorMode) { }
+
+ACTION_ON_FEEDBACK(AcquisitionController, oni_vicon_recorder, ChangeDepthSensorMode) { }
+
+ACTION_ON_DONE(AcquisitionController, oni_vicon_recorder, ChangeDepthSensorMode)
 {
     switch (state.state_)
     {
@@ -402,23 +442,9 @@ void AcquisitionController::changeDepthSensorModeDoneCB(
     setActivity("changing-mode", false);
 }
 
-void AcquisitionController::connectToViconActiveCB()
-{
-}
+ACTION_ON_ACTIVE(AcquisitionController, oni_vicon_recorder, ConnectToVicon) { }
 
-void AcquisitionController::connectToViconDoneCB(
-        const actionlib::SimpleClientGoalState state,
-        const oni_vicon_recorder::ConnectToViconResultConstPtr result)
-{
-    statusItem("Vicon").status->setText("Offline");
-
-    ROS_INFO("Vicon system connection closed.");
-
-    setActivity("vicon-connected", false);
-}
-
-void AcquisitionController::connectToViconFeedbackCB(
-        oni_vicon_recorder::ConnectToViconFeedbackConstPtr feedback)
+ACTION_ON_FEEDBACK(AcquisitionController, oni_vicon_recorder, ConnectToVicon)
 {
     if (feedback->connected)
     {
@@ -426,6 +452,15 @@ void AcquisitionController::connectToViconFeedbackCB(
     }
 
     setActivity("vicon-connected", feedback->connected);
+}
+
+ACTION_ON_DONE(AcquisitionController, oni_vicon_recorder, ConnectToVicon)
+{
+    statusItem("Vicon").status->setText("Offline");
+
+    ROS_INFO("Vicon system connection closed.");
+
+    setActivity("vicon-connected", false);
 }
 
 // ============================================================================================== //
@@ -439,7 +474,7 @@ void AcquisitionController::setDepthSensorClosedStatus()
     statusItem("Device Name").status->setText(" - ");
     statusItem("Mode").status->setText(" - ");
 
-    recording_ac_.cancelAllGoals();
+    ACTION(Record).cancelAllGoals();
 }
 
 AcquisitionController::StatusItem &AcquisitionController::statusItem(std::string item_name)

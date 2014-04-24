@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>697</width>
-    <height>1101</height>
+    <height>1117</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -31,6 +31,12 @@
   <layout class="QVBoxLayout" name="verticalLayout_7">
    <item>
     <widget class="QGroupBox" name="statusBox">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
      <property name="title">
       <string>Status</string>
      </property>
@@ -38,10 +44,16 @@
       <item>
        <widget class="QTreeView" name="statusTreeView">
         <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
+         <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>220</height>
+         </size>
         </property>
         <property name="frameShape">
          <enum>QFrame::Box</enum>
@@ -95,7 +107,7 @@
         <x>0</x>
         <y>0</y>
         <width>679</width>
-        <height>849</height>
+        <height>837</height>
        </rect>
       </property>
       <property name="sizePolicy">
@@ -335,85 +347,6 @@
                 <string>2. Settings</string>
                </property>
                <layout class="QGridLayout" name="gridLayout_2">
-                <item row="6" column="1">
-                 <widget class="QLineEdit" name="displayObjetModelLineEdit">
-                  <property name="frame">
-                   <bool>true</bool>
-                  </property>
-                 </widget>
-                </item>
-                <item row="8" column="1">
-                 <widget class="QCheckBox" name="sameModelCheckBox">
-                  <property name="enabled">
-                   <bool>true</bool>
-                  </property>
-                  <property name="text">
-                   <string>Same as display model</string>
-                  </property>
-                  <property name="checkable">
-                   <bool>true</bool>
-                  </property>
-                  <property name="checked">
-                   <bool>false</bool>
-                  </property>
-                 </widget>
-                </item>
-                <item row="5" column="1">
-                 <widget class="QLineEdit" name="objectModelPackageLineEdit">
-                  <property name="text">
-                   <string>arm_objects</string>
-                  </property>
-                  <property name="frame">
-                   <bool>true</bool>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="2">
-                 <widget class="QPushButton" name="detectObjectNameButton">
-                  <property name="text">
-                   <string>   from Vicon</string>
-                  </property>
-                  <property name="icon">
-                   <iconset theme="view-refresh">
-                    <normaloff/>
-                   </iconset>
-                  </property>
-                 </widget>
-                </item>
-                <item row="4" column="1">
-                 <widget class="QLineEdit" name="recordNameLineEdit">
-                  <property name="text">
-                   <string/>
-                  </property>
-                  <property name="frame">
-                   <bool>true</bool>
-                  </property>
-                 </widget>
-                </item>
-                <item row="7" column="1">
-                 <widget class="QLineEdit" name="trackingObjetModelLineEdit">
-                  <property name="enabled">
-                   <bool>true</bool>
-                  </property>
-                  <property name="frame">
-                   <bool>true</bool>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="0">
-                 <widget class="QLabel" name="locationLabel">
-                  <property name="text">
-                   <string>Recording Directory:</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="1">
-                 <widget class="QComboBox" name="viconObjectsComboBox">
-                  <property name="editable">
-                   <bool>true</bool>
-                  </property>
-                 </widget>
-                </item>
                 <item row="1" column="1">
                  <widget class="QLineEdit" name="directoryLineEdit">
                   <property name="enabled">
@@ -433,23 +366,20 @@
                   </property>
                  </widget>
                 </item>
-                <item row="4" column="0">
-                 <widget class="QLabel" name="RecordNamelabel">
-                  <property name="frameShape">
-                   <enum>QFrame::NoFrame</enum>
-                  </property>
+                <item row="6" column="0">
+                 <widget class="QLabel" name="displayObjectModelFileLabel">
                   <property name="text">
-                   <string>Record Name:</string>
+                   <string>Display Object Model</string>
                   </property>
                  </widget>
                 </item>
-                <item row="8" column="2">
-                 <widget class="QPushButton" name="submitSettingsButton">
+                <item row="0" column="2">
+                 <widget class="QPushButton" name="detectObjectNameButton">
                   <property name="text">
-                   <string>             Apply</string>
+                   <string>   from Vicon</string>
                   </property>
                   <property name="icon">
-                   <iconset theme="dialog-apply">
+                   <iconset theme="view-refresh">
                     <normaloff/>
                    </iconset>
                   </property>
@@ -459,6 +389,23 @@
                  <widget class="QLabel" name="trackingObjectModelLabel">
                   <property name="text">
                    <string>Tracking Object Model</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="4" column="0">
+                 <widget class="QLabel" name="recordNamelabel">
+                  <property name="frameShape">
+                   <enum>QFrame::NoFrame</enum>
+                  </property>
+                  <property name="text">
+                   <string>Record Name:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="5" column="0">
+                 <widget class="QLabel" name="objectModelPackageLabel">
+                  <property name="text">
+                   <string>Model Package or Dir.</string>
                   </property>
                  </widget>
                 </item>
@@ -474,6 +421,47 @@
                   </property>
                  </widget>
                 </item>
+                <item row="9" column="1">
+                 <widget class="QCheckBox" name="sameModelCheckBox">
+                  <property name="enabled">
+                   <bool>true</bool>
+                  </property>
+                  <property name="font">
+                   <font>
+                    <pointsize>11</pointsize>
+                   </font>
+                  </property>
+                  <property name="text">
+                   <string>Same as display</string>
+                  </property>
+                  <property name="checkable">
+                   <bool>true</bool>
+                  </property>
+                  <property name="checked">
+                   <bool>false</bool>
+                  </property>
+                 </widget>
+                </item>
+                <item row="7" column="1">
+                 <widget class="QLineEdit" name="trackingObjetModelLineEdit">
+                  <property name="enabled">
+                   <bool>true</bool>
+                  </property>
+                  <property name="frame">
+                   <bool>true</bool>
+                  </property>
+                 </widget>
+                </item>
+                <item row="4" column="1">
+                 <widget class="QLineEdit" name="recordNameLineEdit">
+                  <property name="text">
+                   <string/>
+                  </property>
+                  <property name="frame">
+                   <bool>true</bool>
+                  </property>
+                 </widget>
+                </item>
                 <item row="4" column="2">
                  <widget class="QPushButton" name="genrateNameButton">
                   <property name="text">
@@ -486,10 +474,27 @@
                   </property>
                  </widget>
                 </item>
-                <item row="5" column="0">
-                 <widget class="QLabel" name="objectModelPackageLabel">
+                <item row="0" column="1">
+                 <widget class="QComboBox" name="viconObjectsComboBox">
+                  <property name="editable">
+                   <bool>true</bool>
+                  </property>
+                 </widget>
+                </item>
+                <item row="5" column="1">
+                 <widget class="QLineEdit" name="objectModelPackageLineEdit">
                   <property name="text">
-                   <string>Object Model Package</string>
+                   <string>arm_objects</string>
+                  </property>
+                  <property name="frame">
+                   <bool>true</bool>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="0">
+                 <widget class="QLabel" name="directoryLabel">
+                  <property name="text">
+                   <string>Recording Directory:</string>
                   </property>
                  </widget>
                 </item>
@@ -500,10 +505,22 @@
                   </property>
                  </widget>
                 </item>
-                <item row="6" column="0">
-                 <widget class="QLabel" name="displayObjectModelFileLabel">
+                <item row="6" column="1">
+                 <widget class="QLineEdit" name="displayObjetModelLineEdit">
+                  <property name="frame">
+                   <bool>true</bool>
+                  </property>
+                 </widget>
+                </item>
+                <item row="9" column="2">
+                 <widget class="QPushButton" name="submitSettingsButton">
                   <property name="text">
-                   <string>Display Object Model</string>
+                   <string>             Apply</string>
+                  </property>
+                  <property name="icon">
+                   <iconset theme="dialog-apply">
+                    <normaloff/>
+                   </iconset>
                   </property>
                  </widget>
                 </item>
@@ -541,7 +558,7 @@
                   </property>
                   <layout class="QGridLayout" name="gridLayout_3">
                    <item row="0" column="4">
-                    <widget class="QPushButton" name="completeGlobalCalibrationButton">
+                    <widget class="QPushButton" name="abortGlobalCalibrationButton">
                      <property name="text">
                       <string>           Abort</string>
                      </property>
@@ -573,7 +590,7 @@
                     </spacer>
                    </item>
                    <item row="5" column="1" colspan="5">
-                    <widget class="QLabel" name="label_4">
+                    <widget class="QLabel" name="localCalibInfo">
                      <property name="font">
                       <font>
                        <pointsize>9</pointsize>
@@ -625,7 +642,7 @@
                     </widget>
                    </item>
                    <item row="0" column="5">
-                    <widget class="QPushButton" name="pushButton_2">
+                    <widget class="QPushButton" name="completeGlobalCalibrationButton">
                      <property name="text">
                       <string>   Complete</string>
                      </property>
@@ -637,7 +654,7 @@
                     </widget>
                    </item>
                    <item row="1" column="1" colspan="5">
-                    <widget class="QLabel" name="label_3">
+                    <widget class="QLabel" name="globalCalibInfo">
                      <property name="font">
                       <font>
                        <pointsize>9</pointsize>
@@ -656,7 +673,7 @@
                     </widget>
                    </item>
                    <item row="4" column="4">
-                    <widget class="QPushButton" name="completeLocalCalibrationButton">
+                    <widget class="QPushButton" name="abortLocalCalibrationButton">
                      <property name="enabled">
                       <bool>false</bool>
                      </property>
@@ -678,7 +695,7 @@
                     </widget>
                    </item>
                    <item row="4" column="5">
-                    <widget class="QPushButton" name="pushButton">
+                    <widget class="QPushButton" name="completeLocalCalibrationButton">
                      <property name="enabled">
                       <bool>false</bool>
                      </property>

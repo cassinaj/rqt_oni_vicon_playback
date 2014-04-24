@@ -13,12 +13,14 @@
 #include <QStringListModel>
 #include <QListWidgetItem>
 #include <QTreeWidgetItem>
+#include <QMessageBox>
 
 #include <ros/ros.h>
 #include <rqt_gui_cpp/plugin.h>
 #include <actionlib/client/simple_action_client.h>
 
 #include <oni_vicon_recorder/ViconObjects.h>
+#include <oni_vicon_recorder/VerifyObjectExists.h>
 
 #include <oni_vicon_recorder/RecordAction.h>
 #include <oni_vicon_recorder/RunDepthSensorAction.h>
@@ -86,13 +88,24 @@ namespace rqt_acquisition_controller
         void onSelectDirectory();
         void onGenerateRecordName();
         void onDetectViconObjects();
+        void onStopAll();
+        void onSettingsChanged(QString change);
+        void onSettingsChanged(int change);
 
     signals:
         void feedbackReceived(int vicon_frames, int kinect_frames);
 
-    private: /* implementation details */
-        bool validateSettings();
+    private: /* implementation details */               
+        bool box(QString message, bool rval = false, QMessageBox::Icon type = QMessageBox::Warning);
         void setDepthSensorClosedStatus();
+
+        bool validateSettings();
+        bool validateObjectName(const QString &style_error);
+        bool validateRecordingDirectory(const QString &style_error);
+        bool validateRecordName(const QString &style_error);
+        bool validateModelLocation(const QString &style_error);
+        bool validateDisplayModelFile(const QString &style_error);
+        bool validateTrackingModelFile(const QString &style_error);
 
         // fluent interface to simplify things
         StatusItem& statusItem(std::string item_name);
@@ -114,6 +127,10 @@ namespace rqt_acquisition_controller
         std::map<std::string, bool> activity_status_map_;
 
         ros::ServiceClient vicon_object_sc_;
+
+        std::string object_model_dir_;
+        std::string object_model_display_file_;
+        std::string object_model_tracking_file_;
     };
 }
 

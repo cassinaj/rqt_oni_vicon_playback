@@ -1,11 +1,14 @@
 
 #include "rqt_acquisition_controller/acquisition_controller.hpp"
 
+#include <boost/filesystem.hpp>
+
 #include <iostream>
 #include <sstream>
 #include <cstdlib>
 
 #include <pluginlib/class_list_macros.h>
+#include <ros/package.h>
 
 #include <QString>
 #include <QStringList>
@@ -13,8 +16,8 @@
 #include <QTimer>
 #include <QFileDialog>
 #include <QDateTime>
-#include <QMessageBox>
 #include <QThread>
+#include <QBrush>
 
 using namespace rqt_acquisition_controller;
 
@@ -51,16 +54,21 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
                 .appendRow(createStatusRow("Mode", " - "))))
         .appendRow(createStatusRow("Recording status", "idle"))
         .appendRow(createStatusRow("Recorded Vicon frames", "0"))
-        .appendRow(createStatusRow("Recorded Depth Sensor frames", "0"));
+        .appendRow(createStatusRow("Recorded Depth Sensor frames", "0"))
+        .appendRow(createStatusRow("Object Model Dir.", " - "))
+        .appendRow(createStatusRow("Display Object Model File", " - "))
+        .appendRow(createStatusRow("Tracking Object Model File", " - "));
 
     ui_.statusTreeView->setModel(status_model_);
     ui_.statusTreeView->expandAll();
     ui_.statusTreeView->resizeColumnToContents(0);
+    ui_.statusTreeView->adjustSize();
 
     timer_ = new QTimer(widget_);
 
     connect(ui_.startRecordingButton, SIGNAL(clicked()), this, SLOT(onStartRecording()));
     connect(ui_.stopRecordingButton, SIGNAL(clicked()), this, SLOT(onStopRecording()));
+    connect(ui_.stopAllButton, SIGNAL(clicked()), this, SLOT(onStopAll()));
     connect(ui_.selectDirectoryButton, SIGNAL(clicked()), this, SLOT(onSelectDirectory()));
     connect(ui_.genrateNameButton, SIGNAL(clicked()), this, SLOT(onGenerateRecordName()));
     connect(ui_.startKinectButton, SIGNAL(clicked()), this, SLOT(onStartDepthSensor()));
@@ -71,6 +79,14 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
     connect(ui_.submitSettingsButton, SIGNAL(clicked()), this, SLOT(onSubmitSettings()));
     connect(ui_.sameModelCheckBox, SIGNAL(toggled(bool)), this, SLOT(onToggleSameModel(bool)));
     connect(ui_.detectObjectNameButton, SIGNAL(clicked()), this, SLOT(onDetectViconObjects()));
+    connect(ui_.viconObjectsComboBox, SIGNAL(editTextChanged(QString)), this, SLOT(onSettingsChanged(QString)));
+    connect(ui_.recordNameLineEdit, SIGNAL(textChanged(QString)), this, SLOT(onSettingsChanged(QString)));
+    connect(ui_.directoryLineEdit, SIGNAL(textChanged(QString)), this, SLOT(onSettingsChanged(QString)));
+    connect(ui_.objectModelPackageLineEdit, SIGNAL(textChanged(QString)), this, SLOT(onSettingsChanged(QString)));
+    connect(ui_.displayObjetModelLineEdit, SIGNAL(textChanged(QString)), this, SLOT(onSettingsChanged(QString)));
+    connect(ui_.trackingObjetModelLineEdit, SIGNAL(textChanged(QString)), this, SLOT(onSettingsChanged(QString)));
+    connect(ui_.sameModelCheckBox, SIGNAL(stateChanged(int)), this, SLOT(onSettingsChanged(int)));
+
     connect(this, SIGNAL(feedbackReceived(int, int)), this, SLOT(oUpdateFeedback(int, int)));
     connect(timer_, SIGNAL(timeout()), this, SLOT(onUpdateStatus()));
 
@@ -183,6 +199,23 @@ void AcquisitionController::onStopRecording()
     ROS_INFO("Stopping recording ...");
 }
 
+void AcquisitionController::onStopAll()
+{
+    onStopRecording();
+    onDisconnectFromVicon();
+    onCloseDepthSensor();
+}
+
+void AcquisitionController::onSettingsChanged(QString change)
+{
+    setActivity("settings-applied", false);
+}
+
+void AcquisitionController::onSettingsChanged(int change)
+{
+    setActivity("settings-applied", false);
+}
+
 void AcquisitionController::onStartDepthSensor()
 {
     setActivity("depth-sensor-starting", true);
@@ -243,9 +276,16 @@ void AcquisitionController::onDisconnectFromVicon()
 }
 
 void AcquisitionController::onSubmitSettings()
-{
-    setActivity("settings-applied", true);
-    ROS_INFO("Settings submitted");
+{   
+    if (validateSettings())
+    {
+        setActivity("settings-applied", true);
+        ROS_INFO("Settings applied");
+    }
+    else
+    {
+        ROS_WARN("Settings not valid");
+    }
 }
 
 void AcquisitionController::onToggleSameModel(bool single_model)
@@ -315,22 +355,27 @@ void AcquisitionController::onUpdateStatus()
     ui_.stopAllButton->setEnabled(recorder_node_online && isActive("recording"));
 
     ui_.startLocalCalibrationButton->setEnabled(isActive("globally-calibrated"));
+    ui_.abortLocalCalibrationButton->setEnabled(isActive("globally-calibrated"));
     ui_.completeLocalCalibrationButton->setEnabled(isActive("globally-calibrated"));
-    ui_.localCalibProgressBar->setEnabled(isActive("globally-calibrated"));
+    ui_.localCalibProgressBar->setEnabled(isActive("globally-calibrated"));    
     ui_.loadLocalCalibButton->setEnabled(isActive("globally-calibrated"));
+    ui_.saveLocalCalibButton->setEnabled(isActive("globally-calibrated"));
+    ui_.localCalibrationLabel->setEnabled(isActive("globally-calibrated"));
+    ui_.localCalibInfo->setEnabled(isActive("globally-calibrated"));
 
     ui_.frameLevel_1->setEnabled(!isActive("global-action-pending"));
     ui_.frameLevel_2->setEnabled(ui_.frameLevel_1->isEnabled() && sensor_node_online
                                                                && vicon_node_online
                                                                && isActive("depth-sensor-running")
                                                                && isActive("vicon-connected"));
-    // fall back if any sensor is not running anymore
+    // fallback if any sensor is not running anymore
     setActivity("settings-applied", isActive("settings-applied") && isActive("depth-sensor-running")
                                                                  && isActive("vicon-connected"));
 
+    ui_.submitSettingsButton->setEnabled(!isActive("settings-applied"));
+
     ui_.frameLevel_3->setEnabled(ui_.frameLevel_2->isEnabled() && isActive("settings-applied"));
-    ui_.frameLevel_4->setEnabled(ui_.frameLevel_3->isEnabled() && isActive("globally-calibrated")
-                                                               && isActive("locally-calibrated"));
+    ui_.frameLevel_4->setEnabled(ui_.frameLevel_2->isEnabled() && isActive("settings-applied"));
 
     ui_.trackingObjetModelLineEdit->setEnabled(!isActive("using-single-model"));
     ui_.sameModelCheckBox->setChecked(isActive("using-single-model"));
@@ -383,6 +428,8 @@ ACTION_ON_DONE(AcquisitionController, oni_vicon_recorder, Record)
     default:
         statusItem("Recording status").status->setText("Aborted");
     }
+
+    setActivity("recording", false);
 }
 
 ACTION_ON_ACTIVE(AcquisitionController, oni_vicon_recorder, RunDepthSensor) {  }
@@ -535,27 +582,185 @@ bool AcquisitionController::isActive(std::string section_name)
 
 bool AcquisitionController::validateSettings()
 {
-    if (ui_.directoryLineEdit->text().isEmpty())
+    QString style_error = "QLabel { color : red; }";
+
+    return  validateObjectName(style_error)
+            && validateRecordingDirectory(style_error)
+            && validateRecordName(style_error)
+            && validateModelLocation(style_error)
+            && validateDisplayModelFile(style_error)
+            && validateTrackingModelFile(style_error);
+}
+
+bool AcquisitionController::validateObjectName(const QString& style_error)
+{
+    oni_vicon_recorder::VerifyObjectExists verify_object;
+    verify_object.request.object_name = ui_.viconObjectsComboBox->currentText().toStdString();
+    if (verify_object.request.object_name.empty())
     {
-        QMessageBox msgBox;
-        msgBox.setText("Please select a directory!");
-        msgBox.setIcon(QMessageBox::Information);
-        msgBox.exec();
-
-        return false;
+        ui_.objectNameLabel->setStyleSheet(style_error);
+        return box("Please specify or select an existing object name in the Vicon scene!");
     }
-
-    if (ui_.recordNameLineEdit->text().isEmpty())
+    else if (ros::service::call("object_exists_verification", verify_object))
     {
-        QMessageBox msgBox;
-        msgBox.setText("Please enter a recording name!");
-        msgBox.setIcon(QMessageBox::Information);
-        msgBox.exec();
-
-        return false;
+        if (!verify_object.response.exists)
+        {
+            ui_.objectNameLabel->setStyleSheet(style_error);
+            return box("Specified object name doesn't exist in Vicon scene!");
+        }
     }
+    else
+    {
+        return box("Verifying object name failed. Is the node connected to Vicon?");
+    }
+    ui_.objectNameLabel->setStyleSheet("");
 
     return true;
+}
+
+bool AcquisitionController::validateRecordingDirectory(const QString& style_error)
+{
+    if (ui_.directoryLineEdit->text().isEmpty())
+    {
+        ui_.directoryLabel->setStyleSheet(style_error);
+        return box("Please select a directory!");
+    }
+    else if (!boost::filesystem::exists(ui_.directoryLineEdit->text().toStdString()))
+    {
+        ui_.directoryLabel->setStyleSheet(style_error);
+        return box("Recording directory doesn't exist!");
+    }
+    ui_.directoryLabel->setStyleSheet("");
+
+    return true;
+}
+
+bool AcquisitionController::validateRecordName(const QString& style_error)
+{
+    if (ui_.recordNameLineEdit->text().isEmpty())
+    {
+        ui_.recordNamelabel->setStyleSheet(style_error);
+        return box("Please enter a recording name!");
+    }
+    else if (!boost::filesystem::portable_name(ui_.recordNameLineEdit->text().toStdString()))
+    {
+        return box("Recording name contains invalid characters. " \
+                   "The allowed characters are 0-9, a-z, A-Z, '.', '_', and '-'.");
+    }
+    ui_.recordNamelabel->setStyleSheet("");
+
+    return true;
+}
+
+bool AcquisitionController::validateModelLocation(const QString& style_error)
+{
+    std::string src = ui_.objectModelPackageLineEdit->text().toStdString();
+    if (src.empty())
+    {
+        statusItem("Object Model Dir.").status->setText(" - ");
+        ui_.objectModelPackageLabel->setStyleSheet(style_error);
+        return box("Please enter the object model ros package name or a directory!");
+    }
+
+    bool valid = false;
+    if (boost::filesystem::exists(src))
+    {
+        object_model_dir_ = src;
+        valid = true;
+    }
+    else
+    {
+        object_model_dir_ = ros::package::getPath(src);
+        valid = !object_model_dir_.empty();
+    }
+
+    if (!valid)
+    {
+        statusItem("Object Model Dir.").status->setText(" - ");
+        ui_.objectModelPackageLabel->setStyleSheet(style_error);
+        return box("The specified object model location is neither a directory nor a ros package.");
+    }
+
+    statusItem("Object Model Dir.").status->setText(object_model_dir_.c_str());
+    ui_.objectModelPackageLabel->setStyleSheet("");
+    return true;
+}
+
+bool AcquisitionController::validateDisplayModelFile(const QString& style_error)
+{
+    boost::filesystem::path file = ui_.displayObjetModelLineEdit->text().toStdString();
+    boost::filesystem::path file_path = object_model_dir_;
+
+    if(!object_model_dir_.empty())
+    {
+        if (boost::filesystem::exists(file_path / file))
+        {
+            object_model_display_file_ = file.string();
+            statusItem("Display Object Model File").status->setText(file.c_str());
+            ui_.displayObjectModelFileLabel->setStyleSheet("");
+            return true;
+        }
+        else if (boost::filesystem::exists(file_path / "objects" / file))
+        {
+            object_model_display_file_ = ("objects" / file).string();
+            statusItem("Display Object Model File").status->setText(
+                        object_model_display_file_.c_str());
+            ui_.displayObjectModelFileLabel->setStyleSheet("");
+            return true;
+        }
+    }
+
+    object_model_display_file_ = "";
+    statusItem("Display Object Model File").status->setText(" - ");
+    ui_.displayObjectModelFileLabel->setStyleSheet(style_error);
+    return box("Cannot find display object model file.");
+}
+
+bool AcquisitionController::validateTrackingModelFile(const QString& style_error)
+{
+    if (!ui_.sameModelCheckBox->isChecked())
+    {
+        boost::filesystem::path file = ui_.trackingObjetModelLineEdit->text().toStdString();
+        boost::filesystem::path file_path = object_model_dir_;
+
+        if(!object_model_dir_.empty())
+        {
+            if (boost::filesystem::exists(file_path / file))
+            {
+                object_model_tracking_file_ = file.string();
+                statusItem("Tracking Object Model File").status->setText(file.c_str());
+                ui_.trackingObjectModelLabel->setStyleSheet("");
+                return true;
+            }
+            else if (boost::filesystem::exists(file_path / "objects" / file))
+            {
+                object_model_tracking_file_ = ("objects" / file).string();
+                statusItem("Tracking Object Model File").status->setText(
+                            object_model_tracking_file_.c_str());
+                ui_.trackingObjectModelLabel->setStyleSheet("");
+                return true;
+            }
+        }
+
+        object_model_display_file_ = "";
+        statusItem("Tracking Object Model File").status->setText(" - ");
+        ui_.trackingObjectModelLabel->setStyleSheet(style_error);
+        return box("Cannot find tracking object model file.");
+    }
+
+    statusItem("Tracking Object Model File").status->setText(object_model_display_file_.c_str());
+
+    return true;
+}
+
+bool AcquisitionController::box(QString message, bool rval, QMessageBox::Icon type)
+{
+    QMessageBox msg_box;
+    msg_box.setIcon(type);
+    msg_box.setText(message);
+    msg_box.exec();
+
+    return rval;
 }
 
 PLUGINLIB_EXPORT_CLASS(rqt_acquisition_controller::AcquisitionController, rqt_gui_cpp::Plugin)

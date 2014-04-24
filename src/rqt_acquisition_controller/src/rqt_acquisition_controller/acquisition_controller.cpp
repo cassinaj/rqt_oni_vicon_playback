@@ -53,6 +53,7 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
                 .appendRow(createStatusRow("Device Name", " - "))
                 .appendRow(createStatusRow("Mode", " - "))))
         .appendRow(createStatusRow("Recording status", "idle"))
+        .appendRow(createStatusRow("Recording duration", "0 s"))
         .appendRow(createStatusRow("Recorded Vicon frames", "0"))
         .appendRow(createStatusRow("Recorded Depth Sensor frames", "0"))
         .appendRow(createStatusRow("Object Model Dir.", " - "))
@@ -62,7 +63,9 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
     ui_.statusTreeView->setModel(status_model_);
     ui_.statusTreeView->expandAll();
     ui_.statusTreeView->resizeColumnToContents(0);
+    ui_.statusTreeView->setMinimumHeight(20 * (status_tree_container_.size() - 1) - 10);
     ui_.statusTreeView->adjustSize();
+    widget_->adjustSize();
 
     timer_ = new QTimer(widget_);
 
@@ -79,16 +82,25 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
     connect(ui_.submitSettingsButton, SIGNAL(clicked()), this, SLOT(onSubmitSettings()));
     connect(ui_.sameModelCheckBox, SIGNAL(toggled(bool)), this, SLOT(onToggleSameModel(bool)));
     connect(ui_.detectObjectNameButton, SIGNAL(clicked()), this, SLOT(onDetectViconObjects()));
-    connect(ui_.viconObjectsComboBox, SIGNAL(editTextChanged(QString)), this, SLOT(onSettingsChanged(QString)));
-    connect(ui_.recordNameLineEdit, SIGNAL(textChanged(QString)), this, SLOT(onSettingsChanged(QString)));
-    connect(ui_.directoryLineEdit, SIGNAL(textChanged(QString)), this, SLOT(onSettingsChanged(QString)));
-    connect(ui_.objectModelPackageLineEdit, SIGNAL(textChanged(QString)), this, SLOT(onSettingsChanged(QString)));
-    connect(ui_.displayObjetModelLineEdit, SIGNAL(textChanged(QString)), this, SLOT(onSettingsChanged(QString)));
-    connect(ui_.trackingObjetModelLineEdit, SIGNAL(textChanged(QString)), this, SLOT(onSettingsChanged(QString)));
-    connect(ui_.sameModelCheckBox, SIGNAL(stateChanged(int)), this, SLOT(onSettingsChanged(int)));
-
-    connect(this, SIGNAL(feedbackReceived(int, int)), this, SLOT(oUpdateFeedback(int, int)));
     connect(timer_, SIGNAL(timeout()), this, SLOT(onUpdateStatus()));
+    connect(ui_.sameModelCheckBox, SIGNAL(stateChanged(int)), this, SLOT(onSettingsChanged(int)));
+    connect(ui_.viconObjectsComboBox,
+            SIGNAL(editTextChanged(QString)), this, SLOT(onSettingsChanged(QString)));
+    connect(ui_.recordNameLineEdit,
+            SIGNAL(textChanged(QString)), this, SLOT(onSettingsChanged(QString)));
+    connect(ui_.directoryLineEdit,
+            SIGNAL(textChanged(QString)), this, SLOT(onSettingsChanged(QString)));
+    connect(ui_.objectModelPackageLineEdit,
+            SIGNAL(textChanged(QString)), this, SLOT(onSettingsChanged(QString)));
+    connect(ui_.displayObjetModelLineEdit,
+            SIGNAL(textChanged(QString)), this, SLOT(onSettingsChanged(QString)));
+    connect(ui_.trackingObjetModelLineEdit,
+            SIGNAL(textChanged(QString)), this, SLOT(onSettingsChanged(QString)));
+
+    qRegisterMetaType<u_int64_t>("u_int64_t");
+
+    connect(this, SIGNAL(feedbackReceived(int, int, u_int64_t)),
+            this, SLOT(oUpdateFeedback(int, int, u_int64_t)));
 
     setActivity("depth-sensor-starting", false);
     setActivity("depth-sensor-running", false);
@@ -115,10 +127,10 @@ void AcquisitionController::shutdownPlugin()
     ACTION(ChangeDepthSensorMode).cancelAllGoals();
 
     // avoid "done" callbacks during destructor
-    if (isActive("recording")) ACTION(Record).waitForResult(ros::Duration(200));
-    if (isActive("depth-sensor-running")) ACTION(RunDepthSensor).waitForResult(ros::Duration(200));
-    if (isActive("vicon-connected")) ACTION(ConnectToVicon).waitForResult(ros::Duration(200));
-    if (isActive("changing-mode")) ACTION(ChangeDepthSensorMode).waitForResult(ros::Duration(200));
+    if (isActive("recording")) ACTION(Record).waitForResult(ros::Duration(500));
+    if (isActive("changing-mode")) ACTION(ChangeDepthSensorMode).waitForResult(ros::Duration(500));
+    if (isActive("depth-sensor-running")) ACTION(RunDepthSensor).waitForResult(ros::Duration(500));
+    if (isActive("vicon-connected")) ACTION(ConnectToVicon).waitForResult(ros::Duration(500));
 }
 
 void AcquisitionController::saveSettings(qt_gui_cpp::Settings& plugin_settings,
@@ -202,8 +214,14 @@ void AcquisitionController::onStopRecording()
 void AcquisitionController::onStopAll()
 {
     onStopRecording();
+    if (isActive("recording")) ACTION(Record).waitForResult(ros::Duration(500));
+
     onDisconnectFromVicon();
+    if (isActive("vicon-connected")) ACTION(ConnectToVicon).waitForResult(ros::Duration(500));
+
     onCloseDepthSensor();
+    if (isActive("changing-mode")) ACTION(ChangeDepthSensorMode).waitForResult(ros::Duration(500));
+    if (isActive("depth-sensor-running")) ACTION(RunDepthSensor).waitForResult(ros::Duration(500));
 }
 
 void AcquisitionController::onSettingsChanged(QString change)
@@ -348,11 +366,10 @@ void AcquisitionController::onUpdateStatus()
     ui_.viconHostIpLineEdit->setEnabled(!isActive("vicon-connected"));
     ui_.viconMultiCastCheckBox->setEnabled(!isActive("vicon-connected"));
     ui_.viconMultiCastLineEdit->setEnabled(ui_.viconMultiCastCheckBox->isChecked()
-                                           && !isActive("vicon-connected"));
+                                           && !isActive("vicon-connected"));    
 
-    ui_.startRecordingButton->setEnabled(recorder_node_online && !isActive("recording"));
-    ui_.stopRecordingButton->setEnabled(recorder_node_online && isActive("recording"));
-    ui_.stopAllButton->setEnabled(recorder_node_online && isActive("recording"));
+    ui_.trackingObjetModelLineEdit->setEnabled(!isActive("using-single-model"));
+    ui_.sameModelCheckBox->setChecked(isActive("using-single-model"));
 
     ui_.startLocalCalibrationButton->setEnabled(isActive("globally-calibrated"));
     ui_.abortLocalCalibrationButton->setEnabled(isActive("globally-calibrated"));
@@ -363,25 +380,29 @@ void AcquisitionController::onUpdateStatus()
     ui_.localCalibrationLabel->setEnabled(isActive("globally-calibrated"));
     ui_.localCalibInfo->setEnabled(isActive("globally-calibrated"));
 
-    ui_.frameLevel_1->setEnabled(!isActive("global-action-pending"));
-    ui_.frameLevel_2->setEnabled(ui_.frameLevel_1->isEnabled() && sensor_node_online
-                                                               && vicon_node_online
-                                                               && isActive("depth-sensor-running")
-                                                               && isActive("vicon-connected"));
+    ui_.startRecordingButton->setEnabled(recorder_node_online && !isActive("recording"));
+    ui_.stopRecordingButton->setEnabled(recorder_node_online && isActive("recording"));
+    ui_.stopAllButton->setEnabled(recorder_node_online && isActive("recording"));
+
     // fallback if any sensor is not running anymore
     setActivity("settings-applied", isActive("settings-applied") && isActive("depth-sensor-running")
                                                                  && isActive("vicon-connected"));
 
     ui_.submitSettingsButton->setEnabled(!isActive("settings-applied"));
 
-    ui_.frameLevel_3->setEnabled(ui_.frameLevel_2->isEnabled() && isActive("settings-applied"));
-    ui_.frameLevel_4->setEnabled(ui_.frameLevel_2->isEnabled() && isActive("settings-applied"));
+    ui_.frameLevel_1->setEnabled(!isActive("global-action-pending"));
 
-    ui_.trackingObjetModelLineEdit->setEnabled(!isActive("using-single-model"));
-    ui_.sameModelCheckBox->setChecked(isActive("using-single-model"));
+    ui_.sensorsBox->setEnabled(sensor_node_online && vicon_node_online && !isActive("recording"));
+    ui_.settingsBox->setEnabled(ui_.sensorsBox->isEnabled() && sensor_node_online
+                                                             && vicon_node_online
+                                                             && isActive("depth-sensor-running")
+                                                             && isActive("vicon-connected")
+                                                             && !isActive("recording"));
+    ui_.calibrationBox->setEnabled(ui_.settingsBox->isEnabled() && isActive("settings-applied"));
+    ui_.recordingBox->setEnabled(isActive("settings-applied"));
 }
 
-void AcquisitionController::oUpdateFeedback(int vicon_frames, int kinect_frames)
+void AcquisitionController::oUpdateFeedback(int vicon_frames, int kinect_frames, u_int64_t duration)
 {
     static unsigned int dots = 0;
     static int last_frame = 0;
@@ -401,6 +422,12 @@ void AcquisitionController::oUpdateFeedback(int vicon_frames, int kinect_frames)
     std::ostringstream kinectFramesStream;
     kinectFramesStream << kinect_frames;
     statusItem("Recorded Depth Sensor frames").status->setText(kinectFramesStream.str().c_str());
+
+    std::ostringstream durationStream;
+    durationStream << std::fixed << std::setprecision(2);
+    durationStream << double(duration)/1000.;
+    durationStream << " s";
+    statusItem("Recording duration").status->setText(durationStream.str().c_str());
 }
 
 // ============================================================================================== //
@@ -415,7 +442,7 @@ ACTION_ON_FEEDBACK(AcquisitionController, oni_vicon_recorder, Record)
 {    
     setActivity("recording", true);
 
-    emit feedbackReceived(feedback->vicon_frames, feedback->kinect_frames);
+    emit feedbackReceived(feedback->vicon_frames, feedback->kinect_frames, feedback->duration);
 }
 
 ACTION_ON_DONE(AcquisitionController, oni_vicon_recorder, Record)
@@ -637,6 +664,8 @@ bool AcquisitionController::validateRecordingDirectory(const QString& style_erro
 
 bool AcquisitionController::validateRecordName(const QString& style_error)
 {
+    boost::filesystem::path record_dir = ui_.directoryLineEdit->text().toStdString();
+
     if (ui_.recordNameLineEdit->text().isEmpty())
     {
         ui_.recordNamelabel->setStyleSheet(style_error);
@@ -644,8 +673,14 @@ bool AcquisitionController::validateRecordName(const QString& style_error)
     }
     else if (!boost::filesystem::portable_name(ui_.recordNameLineEdit->text().toStdString()))
     {
+        ui_.recordNamelabel->setStyleSheet(style_error);
         return box("Recording name contains invalid characters. " \
                    "The allowed characters are 0-9, a-z, A-Z, '.', '_', and '-'.");
+    }
+    else if(boost::filesystem::exists(record_dir / ui_.recordNameLineEdit->text().toStdString()))
+    {
+        ui_.recordNamelabel->setStyleSheet(style_error);
+        return box("Record already exists! Please select a different name!");
     }
     ui_.recordNamelabel->setStyleSheet("");
 

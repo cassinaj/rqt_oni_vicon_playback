@@ -84,7 +84,7 @@ namespace rqt_acquisition_controller
         void onSubmitSettings();
         void onToggleSameModel(bool single_model);
         void onUpdateStatus();
-        void oUpdateFeedback(int vicon_frames, int kinect_frames);
+        void oUpdateFeedback(int vicon_frames, int kinect_frames, u_int64_t duration);
         void onSelectDirectory();
         void onGenerateRecordName();
         void onDetectViconObjects();
@@ -93,7 +93,7 @@ namespace rqt_acquisition_controller
         void onSettingsChanged(int change);
 
     signals:
-        void feedbackReceived(int vicon_frames, int kinect_frames);
+        void feedbackReceived(int vicon_frames, int kinect_frames, u_int64_t duration);
 
     private: /* implementation details */               
         bool box(QString message, bool rval = false, QMessageBox::Icon type = QMessageBox::Warning);

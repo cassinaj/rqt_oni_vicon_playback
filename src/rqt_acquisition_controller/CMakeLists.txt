@@ -5,7 +5,7 @@ project(rqt_acquisition_controller)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 
-find_package(catkin REQUIRED COMPONENTS rqt_gui rqt_gui_cpp  actionlib_msgs actionlib)
+find_package(catkin REQUIRED COMPONENTS rqt_gui rqt_gui_cpp  actionlib_msgs actionlib rviz)
 
 find_package(Qt4 COMPONENTS QtCore QtGui REQUIRED)
 include(${QT_USE_FILE})
@@ -100,7 +100,7 @@ set(rqt_acquisition_controller_INCLUDE_DIRECTORIES
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
-  CATKIN_DEPENDS rqt_gui rqt_gui_cpp  actionlib_msgs actionlib
+  CATKIN_DEPENDS rqt_gui rqt_gui_cpp  actionlib_msgs actionlib rviz
 #  DEPENDS system_lib
 )
 catkin_python_setup()

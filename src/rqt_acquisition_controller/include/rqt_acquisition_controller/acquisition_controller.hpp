@@ -91,9 +91,11 @@ namespace rqt_acquisition_controller
         void onStopAll();
         void onSettingsChanged(QString change);
         void onSettingsChanged(int change);
+        void onSetStatusIcon(QString setting, QString url);
 
     signals:
         void feedbackReceived(int vicon_frames, int kinect_frames, u_int64_t duration);
+        void setStatusIcon(QString setting, QString url);
 
     private: /* implementation details */               
         bool box(QString message, bool rval = false, QMessageBox::Icon type = QMessageBox::Warning);
@@ -116,9 +118,15 @@ namespace rqt_acquisition_controller
         void setActivity(std::string section_name, bool active);
         bool isActive(std::string section_name);
 
+        void ensureStateConsistency(bool sensor_node_online,
+                                    bool vicon_node_online,
+                                    bool recorder_node_online);
+
     private:
         Ui::AcquisitionController ui_;
         QWidget* widget_;
+
+        QIcon empty_icon_;
 
         QTimer* timer_;
         QStandardItemModel* status_model_;                

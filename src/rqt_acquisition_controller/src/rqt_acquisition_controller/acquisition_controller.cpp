@@ -18,7 +18,11 @@
 #include <QDateTime>
 #include <QThread>
 #include <QBrush>
+#include <QPainter>
 
+#include <rviz/load_resource.h>
+
+using namespace rviz;
 using namespace rqt_acquisition_controller;
 
 AcquisitionController::AcquisitionController():
@@ -69,6 +73,13 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
 
     timer_ = new QTimer(widget_);
 
+    ui_.startGlobalCalibrationButton->setIcon(loadPixmap("package://rviz/icons/classes/TF.png"));
+    ui_.startLocalCalibrationButton->setIcon(loadPixmap("package://rviz/icons/classes/TF.png"));
+
+    QPixmap empty_map(16, 16);
+    empty_map.fill(QColor(0,0,0,0));
+    empty_icon_ = QIcon(empty_map);
+
     connect(ui_.startRecordingButton, SIGNAL(clicked()), this, SLOT(onStartRecording()));
     connect(ui_.stopRecordingButton, SIGNAL(clicked()), this, SLOT(onStopRecording()));
     connect(ui_.stopAllButton, SIGNAL(clicked()), this, SLOT(onStopAll()));
@@ -101,6 +112,8 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
 
     connect(this, SIGNAL(feedbackReceived(int, int, u_int64_t)),
             this, SLOT(oUpdateFeedback(int, int, u_int64_t)));
+    connect(this, SIGNAL(setStatusIcon(QString,QString)),
+            this, SLOT(onSetStatusIcon(QString,QString)));
 
     setActivity("depth-sensor-starting", false);
     setActivity("depth-sensor-running", false);
@@ -234,6 +247,22 @@ void AcquisitionController::onSettingsChanged(int change)
     setActivity("settings-applied", false);
 }
 
+void AcquisitionController::onSetStatusIcon(QString setting, QString url)
+{
+    if (!url.compare("none"))
+    {
+        statusItem(setting.toStdString()).status->setIcon(QIcon());
+    }
+    else if (!url.compare("empty"))
+    {
+        statusItem(setting.toStdString()).status->setIcon(empty_icon_);
+    }
+    else
+    {
+        statusItem(setting.toStdString()).status->setIcon(loadPixmap(url));
+    }
+}
+
 void AcquisitionController::onStartDepthSensor()
 {
     setActivity("depth-sensor-starting", true);
@@ -351,6 +380,12 @@ void AcquisitionController::onUpdateStatus()
     bool vicon_node_online = ACTION(ConnectToVicon).isServerConnected();
     bool recorder_node_online = ACTION(Record).isServerConnected();
 
+    ensureStateConsistency(sensor_node_online, vicon_node_online, recorder_node_online);
+
+    statusItem("Recorder").status->setIcon(
+                sensor_node_online
+                    ? loadPixmap("package://rviz/icons/ok.png")
+                    : loadPixmap("package://rviz/icons/warning.png"));
     statusItem("Recorder").status->setText(recorder_node_online ? "Connected" : "Disconnected");
 
     ui_.startKinectButton->setEnabled(sensor_node_online && !isActive("depth-sensor-running")
@@ -406,12 +441,18 @@ void AcquisitionController::oUpdateFeedback(int vicon_frames, int kinect_frames,
 {
     static unsigned int dots = 0;
     static int last_frame = 0;
-    if (last_frame != kinect_frames && last_frame%10 == 0)
+    static bool icon_on = false;
+    if (last_frame != kinect_frames && last_frame%15 == 0)
     {
         std::ostringstream statusStream;
         statusStream << "Recording ";
         statusStream << std::string(++dots % 4, '.');
         statusItem("Recording status").status->setText(statusStream.str().c_str());
+
+        statusItem("Recording status").status->setIcon(
+                    icon_on ? QIcon::fromTheme("media-record") : empty_icon_);
+
+        icon_on = !icon_on;
     }
     last_frame = kinect_frames;
 
@@ -442,6 +483,7 @@ ACTION_ON_FEEDBACK(AcquisitionController, oni_vicon_recorder, Record)
 {    
     setActivity("recording", true);
 
+
     emit feedbackReceived(feedback->vicon_frames, feedback->kinect_frames, feedback->duration);
 }
 
@@ -454,7 +496,7 @@ ACTION_ON_DONE(AcquisitionController, oni_vicon_recorder, Record)
         break;
     default:
         statusItem("Recording status").status->setText("Aborted");
-    }
+    }    
 
     setActivity("recording", false);
 }
@@ -462,8 +504,9 @@ ACTION_ON_DONE(AcquisitionController, oni_vicon_recorder, Record)
 ACTION_ON_ACTIVE(AcquisitionController, oni_vicon_recorder, RunDepthSensor) {  }
 
 ACTION_ON_FEEDBACK(AcquisitionController, oni_vicon_recorder, RunDepthSensor)
-{
+{       
     statusItem("Depth Sensor").status->setText("Running");
+    emit setStatusIcon("Depth Sensor", "package://rviz/icons/ok.png");
 
     statusItem("Device Type").status->setText(feedback->device_type.c_str());
     statusItem("Device Name").status->setText(feedback->device_name.c_str());
@@ -521,16 +564,18 @@ ACTION_ON_ACTIVE(AcquisitionController, oni_vicon_recorder, ConnectToVicon) { }
 ACTION_ON_FEEDBACK(AcquisitionController, oni_vicon_recorder, ConnectToVicon)
 {
     if (feedback->connected)
-    {
+    {        
         statusItem("Vicon").status->setText("Online");
+        emit setStatusIcon("Vicon", "package://rviz/icons/ok.png");
     }
 
     setActivity("vicon-connected", feedback->connected);
 }
 
 ACTION_ON_DONE(AcquisitionController, oni_vicon_recorder, ConnectToVicon)
-{
+{    
     statusItem("Vicon").status->setText("Offline");
+    emit setStatusIcon("Vicon", "none");
 
     ROS_INFO("Vicon system connection closed.");
 
@@ -543,6 +588,7 @@ ACTION_ON_DONE(AcquisitionController, oni_vicon_recorder, ConnectToVicon)
 
 void AcquisitionController::setDepthSensorClosedStatus()
 {
+    emit setStatusIcon("Depth Sensor", "none");
     statusItem("Depth Sensor").status->setText("Closed");
     statusItem("Device Type").status->setText(" - ");
     statusItem("Device Name").status->setText(" - ");
@@ -605,6 +651,31 @@ bool AcquisitionController::isActive(std::string section_name)
     }
 
     return activity_status_map_[section_name];
+}
+
+void AcquisitionController::ensureStateConsistency(bool sensor_node_online,
+                                                   bool vicon_node_online,
+                                                   bool recorder_node_online)
+{
+    if (!sensor_node_online || !vicon_node_online || !recorder_node_online)
+    {
+        if (isActive("recording"))
+        {
+            ACTION(Record).stopTrackingGoal();
+            ACTION(ConnectToVicon).stopTrackingGoal();
+            ACTION(RunDepthSensor).stopTrackingGoal();
+            setActivity("recording", false);
+            setActivity("depth-sensor-starting", false);
+            setActivity("depth-sensor-running", false);
+            setActivity("vicon-connected", false);
+
+            QIcon failed_icon = QIcon(loadPixmap("package://rviz/icons/failed_display.png"));
+            statusItem("Recorder").status->setIcon(failed_icon);
+            statusItem("Vicon").status->setIcon(failed_icon);
+            statusItem("Depth Sensor").status->setIcon(failed_icon);
+            statusItem("Recording status").status->setIcon(failed_icon);
+        }
+    }
 }
 
 bool AcquisitionController::validateSettings()

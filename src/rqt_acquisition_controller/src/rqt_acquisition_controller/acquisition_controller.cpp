@@ -356,8 +356,13 @@ void AcquisitionController::onSelectDirectory()
 
 void AcquisitionController::onGenerateRecordName()
 {
-    QDateTime dateTime = QDateTime::currentDateTime();
-    ui_.recordNameLineEdit->setText("ObjectName_" + dateTime.toString("MMM-dd-yyyy_HH-mm-ss"));
+    QDateTime dateTime = QDateTime::currentDateTime();            
+
+    QString object_name = ui_.viconObjectsComboBox->currentText();
+
+    ui_.recordNameLineEdit->setText(
+                (object_name.isEmpty() ? "ObjectName_" : object_name + "_")
+                 + dateTime.toString("MMM-dd-yyyy_HH-mm-ss"));
 }
 
 void AcquisitionController::onDetectViconObjects()

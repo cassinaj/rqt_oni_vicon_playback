@@ -26,10 +26,10 @@
 #include <oni_vicon_recorder/RunDepthSensorAction.h>
 #include <oni_vicon_recorder/ChangeDepthSensorModeAction.h>
 #include <oni_vicon_recorder/ConnectToViconAction.h>
+#include <depth_sensor_vicon_calibration/GlobalCalibrationAction.h>
+#include <depth_sensor_vicon_calibration/ContinueGlobalCalibrationAction.h>
 
-#include <rqt_acquisition_controller/action_helper.hpp>
-
-
+#include <ros_action_helper/action_helper.hpp>
 
 namespace rqt_acquisition_controller
 {
@@ -49,6 +49,8 @@ namespace rqt_acquisition_controller
     ACTION_IMPLEMENT(oni_vicon_recorder, RunDepthSensor)
     ACTION_IMPLEMENT(oni_vicon_recorder, ConnectToVicon)
     ACTION_IMPLEMENT(oni_vicon_recorder, ChangeDepthSensorMode)
+    ACTION_IMPLEMENT(depth_sensor_vicon_calibration, GlobalCalibration)
+    ACTION_IMPLEMENT(depth_sensor_vicon_calibration, ContinueGlobalCalibration)
 
     public:
         struct StatusItem
@@ -92,10 +94,15 @@ namespace rqt_acquisition_controller
         void onSettingsChanged(QString change);
         void onSettingsChanged(int change);
         void onSetStatusIcon(QString setting, QString url);
+        void onStartGlobalCalibration();
+        void onContinueGlobalCalibration();
+        void onAbortGlobalCalibration();
+        void onGlobalCalibrationFeedback(int progress, QString status);
 
     signals:
         void feedbackReceived(int vicon_frames, int kinect_frames, u_int64_t duration);
         void setStatusIcon(QString setting, QString url);
+        void globalCalibrationFeedback(int progress, QString status);
 
     private: /* implementation details */               
         bool box(QString message, bool rval = false, QMessageBox::Icon type = QMessageBox::Warning);

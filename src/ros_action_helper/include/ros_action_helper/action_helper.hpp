@@ -2,6 +2,7 @@
 #ifndef RQT_ACQUISITION_CONTROLLER_ACTION_HELPER_HPP
 #define RQT_ACQUISITION_CONTROLLER_ACTION_HELPER_HPP
 
+#include <actionlib/client/simple_action_client.h>
 
 /**
  * ROS actionlib helper macros. In case of using many actions, the implementation will quickly
@@ -112,5 +113,20 @@
         boost::bind(&current_class_name::action_name##DoneCB, this, _1, _2),\
         boost::bind(&current_class_name::action_name##ActiveCB, this),\
         boost::bind(&current_class_name::action_name##FeedbackCB, this, _1))
+
+
+#define ACTION_SHUTDOWN(action_name, is_active)\
+    if (action_name##_ac_.isServerConnected()) \
+    { \
+        action_name##_ac_.cancelAllGoals(); \
+        if (is_active) \
+        { \
+            action_name##_ac_.waitForResult(ros::Duration(0.5)); \
+        } \
+    } \
+    else if (is_active) \
+    { \
+        action_name##_ac_.stopTrackingGoal(); \
+    }
 
 #endif

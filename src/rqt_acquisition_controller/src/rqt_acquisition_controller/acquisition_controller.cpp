@@ -31,7 +31,9 @@ AcquisitionController::AcquisitionController():
     ACTION(Record)("start_oni_vicon_recorder", true),
     ACTION(RunDepthSensor)("run_depth_sensor", true),
     ACTION(ChangeDepthSensorMode)("change_depth_sensor_mode", true),
-    ACTION(ConnectToVicon)("connect_to_vicon", true)
+    ACTION(ConnectToVicon)("connect_to_vicon", true),
+    ACTION(GlobalCalibration)("depth_sensor_vicon_global_calibration", true),
+    ACTION(ContinueGlobalCalibration)("depth_sensor_vicon_global_calibration_continue", true)
 {
     setObjectName("AcquisitionController");
 }
@@ -93,6 +95,10 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
     connect(ui_.submitSettingsButton, SIGNAL(clicked()), this, SLOT(onSubmitSettings()));
     connect(ui_.sameModelCheckBox, SIGNAL(toggled(bool)), this, SLOT(onToggleSameModel(bool)));
     connect(ui_.detectObjectNameButton, SIGNAL(clicked()), this, SLOT(onDetectViconObjects()));
+
+    connect(ui_.startGlobalCalibrationButton, SIGNAL(clicked()), this, SLOT(onStartGlobalCalibration()));
+    connect(ui_.abortGlobalCalibrationButton, SIGNAL(clicked()), this, SLOT(onAbortGlobalCalibration()));
+
     connect(timer_, SIGNAL(timeout()), this, SLOT(onUpdateStatus()));
     connect(ui_.sameModelCheckBox, SIGNAL(stateChanged(int)), this, SLOT(onSettingsChanged(int)));
     connect(ui_.viconObjectsComboBox,
@@ -114,6 +120,8 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
             this, SLOT(oUpdateFeedback(int, int, u_int64_t)));
     connect(this, SIGNAL(setStatusIcon(QString,QString)),
             this, SLOT(onSetStatusIcon(QString,QString)));
+    connect(this, SIGNAL(globalCalibrationFeedback(int,QString)),
+            this, SLOT(onGlobalCalibrationFeedback(int,QString)));
 
     setActivity("depth-sensor-starting", false);
     setActivity("depth-sensor-running", false);
@@ -124,6 +132,10 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
     setActivity("using-single-model", false);
     setActivity("globally-calibrated", false);
     setActivity("locally-calibrated", false);
+    setActivity("global-calibration-running", false);
+    setActivity("global-calibration-continued", false);
+    setActivity("local-calibration-running", false);
+    setActivity("local-calibration-continued", false);
     setActivity("recording", false);
     setActivity("global-action-pending", false);
 
@@ -134,16 +146,12 @@ void AcquisitionController::shutdownPlugin()
 {
     timer_->stop();
 
-    ACTION(Record).cancelAllGoals();
-    ACTION(RunDepthSensor).cancelAllGoals();
-    ACTION(ConnectToVicon).cancelAllGoals();
-    ACTION(ChangeDepthSensorMode).cancelAllGoals();
-
     // avoid "done" callbacks during destructor
-    if (isActive("recording")) ACTION(Record).waitForResult(ros::Duration(500));
-    if (isActive("changing-mode")) ACTION(ChangeDepthSensorMode).waitForResult(ros::Duration(500));
-    if (isActive("depth-sensor-running")) ACTION(RunDepthSensor).waitForResult(ros::Duration(500));
-    if (isActive("vicon-connected")) ACTION(ConnectToVicon).waitForResult(ros::Duration(500));
+    ACTION_SHUTDOWN(Record, isActive("recording"));
+    ACTION_SHUTDOWN(ChangeDepthSensorMode, isActive("changing-mode"));
+    ACTION_SHUTDOWN(RunDepthSensor, isActive("depth-sensor-running"));
+    ACTION_SHUTDOWN(ConnectToVicon, isActive("vicon-connected"));
+    ACTION_SHUTDOWN(GlobalCalibration, isActive("global-calibration-running"));
 }
 
 void AcquisitionController::saveSettings(qt_gui_cpp::Settings& plugin_settings,
@@ -212,7 +220,6 @@ void AcquisitionController::onStartRecording()
         return;
     }
 
-    oni_vicon_recorder::RecordGoal recording_goal;
     ACTION_GOAL(Record).destination = ui_.directoryLineEdit->text().toStdString();
     ACTION_GOAL(Record).name = ui_.recordNameLineEdit->text().toStdString();
     ACTION_SEND_GOAL(AcquisitionController, oni_vicon_recorder, Record);
@@ -227,14 +234,14 @@ void AcquisitionController::onStopRecording()
 void AcquisitionController::onStopAll()
 {
     onStopRecording();
-    if (isActive("recording")) ACTION(Record).waitForResult(ros::Duration(500));
+    if (isActive("recording")) ACTION(Record).waitForResult(ros::Duration(0.5));
 
     onDisconnectFromVicon();
-    if (isActive("vicon-connected")) ACTION(ConnectToVicon).waitForResult(ros::Duration(500));
+    if (isActive("vicon-connected")) ACTION(ConnectToVicon).waitForResult(ros::Duration(0.5));
 
     onCloseDepthSensor();
-    if (isActive("changing-mode")) ACTION(ChangeDepthSensorMode).waitForResult(ros::Duration(500));
-    if (isActive("depth-sensor-running")) ACTION(RunDepthSensor).waitForResult(ros::Duration(500));
+    if (isActive("changing-mode")) ACTION(ChangeDepthSensorMode).waitForResult(ros::Duration(0.5));
+    if (isActive("depth-sensor-running")) ACTION(RunDepthSensor).waitForResult(ros::Duration(0.5));
 }
 
 void AcquisitionController::onSettingsChanged(QString change)
@@ -261,6 +268,39 @@ void AcquisitionController::onSetStatusIcon(QString setting, QString url)
     {
         statusItem(setting.toStdString()).status->setIcon(loadPixmap(url));
     }
+}
+
+void AcquisitionController::onStartGlobalCalibration()
+{
+    if (!isActive("global-calibration-running"))
+    {
+        setActivity("global-calibration-running", true);
+        boost::filesystem::path object_path = object_model_dir_;
+        object_path = object_path / object_model_display_file_;
+        ACTION_GOAL(GlobalCalibration).calibration_object_path = "file://" + object_path.string();
+        ACTION_SEND_GOAL(AcquisitionController,
+                         depth_sensor_vicon_calibration,
+                         GlobalCalibration);
+    }
+    else if (!isActive("global-calibration-continued"))
+    {
+        setActivity("global-calibration-continued", true);
+        ACTION_SEND_GOAL(AcquisitionController,
+                         depth_sensor_vicon_calibration,
+                         ContinueGlobalCalibration);
+    }
+}
+
+void AcquisitionController::onAbortGlobalCalibration()
+{
+    ACTION(GlobalCalibration).cancelAllGoals();
+    ROS_INFO("Aborting global calibration ...");
+}
+
+void AcquisitionController::onGlobalCalibrationFeedback(int progress, QString status)
+{
+    ui_.gloablCalibProgressBar->setValue(progress);
+    ui_.gloablCalibProgressBar->setFormat(status + " %p%");
 }
 
 void AcquisitionController::onStartDepthSensor()
@@ -385,6 +425,9 @@ void AcquisitionController::onUpdateStatus()
     bool vicon_node_online = ACTION(ConnectToVicon).isServerConnected();
     bool recorder_node_online = ACTION(Record).isServerConnected();
 
+    bool calibrating = isActive("global-calibration-running")
+                       || isActive("local-calibration-running");
+
     ensureStateConsistency(sensor_node_online, vicon_node_online, recorder_node_online);
 
     statusItem("Recorder").status->setIcon(
@@ -432,14 +475,19 @@ void AcquisitionController::onUpdateStatus()
 
     ui_.frameLevel_1->setEnabled(!isActive("global-action-pending"));
 
-    ui_.sensorsBox->setEnabled(sensor_node_online && vicon_node_online && !isActive("recording"));
+    ui_.sensorsBox->setEnabled(sensor_node_online
+                               && vicon_node_online
+                               && !isActive("recording")
+                               && !calibrating);
     ui_.settingsBox->setEnabled(ui_.sensorsBox->isEnabled() && sensor_node_online
                                                              && vicon_node_online
                                                              && isActive("depth-sensor-running")
                                                              && isActive("vicon-connected")
-                                                             && !isActive("recording"));
-    ui_.calibrationBox->setEnabled(ui_.settingsBox->isEnabled() && isActive("settings-applied"));
-    ui_.recordingBox->setEnabled(isActive("settings-applied"));
+                                                             && !isActive("recording")
+                                                             && !calibrating);
+    ui_.calibrationBox->setEnabled(isActive("settings-applied")
+                                   || isActive("global-calibration-running"));
+    ui_.recordingBox->setEnabled(isActive("settings-applied") && !calibrating);
 }
 
 void AcquisitionController::oUpdateFeedback(int vicon_frames, int kinect_frames, u_int64_t duration)
@@ -587,6 +635,45 @@ ACTION_ON_DONE(AcquisitionController, oni_vicon_recorder, ConnectToVicon)
     setActivity("vicon-connected", false);
 }
 
+ACTION_ON_ACTIVE(AcquisitionController, depth_sensor_vicon_calibration, GlobalCalibration)
+{
+    ROS_INFO("Starting global calibration ...");
+    setActivity("global-calibration-running", true);
+}
+
+ACTION_ON_FEEDBACK(AcquisitionController, depth_sensor_vicon_calibration, GlobalCalibration)
+{
+    emit globalCalibrationFeedback(feedback->procress, feedback->status.c_str());
+}
+
+ACTION_ON_DONE(AcquisitionController, depth_sensor_vicon_calibration, GlobalCalibration)
+{
+    setActivity("global-calibration-running", false);
+    setActivity("global-calibration-continued", false);
+
+    switch (state.state_)
+    {
+    case actionlib::SimpleClientGoalState::SUCCEEDED:
+        ROS_INFO("Global calibration done.");
+        break;
+    default:
+        ROS_INFO("Global calibration aborted.");
+    }
+}
+
+ACTION_ON_ACTIVE(AcquisitionController, depth_sensor_vicon_calibration, ContinueGlobalCalibration)
+{
+    ROS_INFO("Continue global calibration ...");
+}
+
+ACTION_ON_FEEDBACK(AcquisitionController, depth_sensor_vicon_calibration, ContinueGlobalCalibration)
+{
+}
+
+ACTION_ON_DONE(AcquisitionController, depth_sensor_vicon_calibration, ContinueGlobalCalibration)
+{
+}
+
 // ============================================================================================== //
 // == Implementation details ==================================================================== //
 // ============================================================================================== //
@@ -664,15 +751,20 @@ void AcquisitionController::ensureStateConsistency(bool sensor_node_online,
 {
     if (!sensor_node_online || !vicon_node_online || !recorder_node_online)
     {
-        if (isActive("recording"))
+        if (isActive("recording")
+            || isActive("global-calibration-running")
+            || isActive("local-calibration-running"))
         {
             ACTION(Record).stopTrackingGoal();
             ACTION(ConnectToVicon).stopTrackingGoal();
             ACTION(RunDepthSensor).stopTrackingGoal();
+            ACTION(GlobalCalibration).stopTrackingGoal();
             setActivity("recording", false);
             setActivity("depth-sensor-starting", false);
             setActivity("depth-sensor-running", false);
             setActivity("vicon-connected", false);
+            setActivity("global-calibration-running", false);
+            setActivity("local-calibration-running", false);
 
             QIcon failed_icon = QIcon(loadPixmap("package://rviz/icons/failed_display.png"));
             statusItem("Recorder").status->setIcon(failed_icon);

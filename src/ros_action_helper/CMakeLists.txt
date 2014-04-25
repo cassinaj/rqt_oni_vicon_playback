@@ -1,31 +1,10 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(rqt_acquisition_controller)
+project(ros_action_helper)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-
-find_package(catkin REQUIRED COMPONENTS rqt_gui rqt_gui_cpp  actionlib_msgs actionlib rviz ros_action_helper depth_sensor_vicon_calibration)
-
-find_package(Qt4 COMPONENTS QtCore QtGui REQUIRED)
-include(${QT_USE_FILE})
-
-set(rqt_acquisition_controller_SOURCES
-  src/rqt_acquisition_controller/acquisition_controller.cpp
-)
-
-set(rqt_acquisition_controller_HEADERS
-  include/rqt_acquisition_controller/acquisition_controller.hpp  
-)
-
-set(rqt_acquisition_controller_UIS
-  src/rqt_acquisition_controller/acquisition_controller.ui
-)
-
-set(rqt_acquisition_controller_INCLUDE_DIRECTORIES
-  include
-  ${CMAKE_CURRENT_BINARY_DIR}
-)
+find_package(catkin REQUIRED)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -98,11 +77,7 @@ set(rqt_acquisition_controller_INCLUDE_DIRECTORIES
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES ${PROJECT_NAME}
-  CATKIN_DEPENDS rqt_gui rqt_gui_cpp  actionlib_msgs actionlib rviz depth_sensor_vicon_calibration
-#  DEPENDS system_lib
 )
-catkin_python_setup()
 
 ###########
 ## Build ##
@@ -112,27 +87,20 @@ catkin_python_setup()
 ## Your package locations should be listed before other locations
 # include_directories(include)
 
-qt4_wrap_cpp(rqt_acquisition_controller_MOCS ${rqt_acquisition_controller_HEADERS})
-qt4_wrap_ui(rqt_acquisition_controller_UIS_H ${rqt_acquisition_controller_UIS})
-
-include_directories(${rqt_acquisition_controller_INCLUDE_DIRECTORIES} ${catkin_INCLUDE_DIRS})
-add_library(${PROJECT_NAME} ${rqt_acquisition_controller_SOURCES} ${rqt_acquisition_controller_HEADERS} ${rqt_acquisition_controller_MOCS} ${rqt_acquisition_controller_UIS_H})
-target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY})
-
 ## Declare a cpp library
-# add_library(rqt_acquisition_controller_plugin
-#   src/${PROJECT_NAME}/rqt_acquisition_controller_plugin.cpp
+# add_library(ros_action_helper
+#   src/${PROJECT_NAME}/ros_action_helper.cpp
 # )
 
 ## Declare a cpp executable
-# add_executable(rqt_acquisition_controller_node src/rqt_acquisition_controller_node.cpp)
+# add_executable(ros_action_helper_node src/ros_action_helper_node.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
-# add_dependencies(rqt_acquisition_controller_node rqt_acquisition_controller_generate_messages_cpp)
+# add_dependencies(ros_action_helper_node ros_action_helper_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(rqt_acquisition_controller_node
+# target_link_libraries(ros_action_helper_node
 #   ${catkin_LIBRARIES}
 # )
 
@@ -143,42 +111,40 @@ target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${QT_QTCORE_LIBRARY} $
 # all install targets should use catkin DESTINATION variables
 # See http://ros.org/doc/api/catkin/html/adv_user_guide/variables.html
 
-find_package(class_loader)
-class_loader_hide_library_symbols(${PROJECT_NAME})
-
-## Mark other files for installation (e.g. launch and bag files, etc.)
-install(FILES plugin.xml
-#   # myfile1
-#   # myfile2
-   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-)
-
-## Mark executables and/or libraries for installation
-install(TARGETS rqt_acquisition_controller
-   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
-
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
-install(PROGRAMS
-   scripts/rqt_acquisition_controller
-   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
+# install(PROGRAMS
+#   scripts/my_python_script
+#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+# )
+
+## Mark executables and/or libraries for installation
+# install(TARGETS ros_action_helper ros_action_helper_node
+#   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+#   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+#   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+# )
 
 ## Mark cpp header files for installation
-#install(DIRECTORY include/${PROJECT_NAME}/
-#  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-#)
+# install(DIRECTORY include/${PROJECT_NAME}/
+#   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+#   FILES_MATCHING PATTERN "*.h"
+#   PATTERN ".svn" EXCLUDE
+# )
 
+## Mark other files for installation (e.g. launch and bag files, etc.)
+# install(FILES
+#   # myfile1
+#   # myfile2
+#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+# )
 
 #############
 ## Testing ##
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_rqt_acquisition_controller.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_ros_action_helper.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()

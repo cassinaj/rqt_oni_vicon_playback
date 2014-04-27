@@ -7,6 +7,9 @@ project(rqt_acquisition_controller)
 
 find_package(catkin REQUIRED COMPONENTS rqt_gui rqt_gui_cpp  actionlib_msgs actionlib rviz ros_action_helper depth_sensor_vicon_calibration)
 
+find_package(PCL 1.3 REQUIRED)
+include_directories(${PCL_INCLUDE_DIRS})
+
 find_package(Qt4 COMPONENTS QtCore QtGui REQUIRED)
 include(${QT_USE_FILE})
 

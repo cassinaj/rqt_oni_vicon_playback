@@ -98,6 +98,8 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
 
     connect(ui_.startGlobalCalibrationButton, SIGNAL(clicked()), this, SLOT(onStartGlobalCalibration()));
     connect(ui_.abortGlobalCalibrationButton, SIGNAL(clicked()), this, SLOT(onAbortGlobalCalibration()));
+    connect(ui_.continueGlobalCalibButton, SIGNAL(clicked()), this, SLOT(onContinueGlobalCalibration()));
+    connect(ui_.completeGlobalCalibrationButton, SIGNAL(clicked()), this, SLOT(onCompleteGlobalCalibration()));
 
     connect(timer_, SIGNAL(timeout()), this, SLOT(onUpdateStatus()));
     connect(ui_.sameModelCheckBox, SIGNAL(stateChanged(int)), this, SLOT(onSettingsChanged(int)));
@@ -129,13 +131,15 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
     setActivity("changing-mode", false);
     setActivity("vicon-connected", false);
     setActivity("settings-applied", false);
-    setActivity("using-single-model", false);
-    setActivity("globally-calibrated", false);
-    setActivity("locally-calibrated", false);
+    setActivity("using-single-model", false);    
     setActivity("global-calibration-running", false);
     setActivity("global-calibration-continued", false);
+    setActivity("global-calibration-finished", false);
+    setActivity("globally-calibrated", false);
     setActivity("local-calibration-running", false);
     setActivity("local-calibration-continued", false);
+    setActivity("local-calibration-finished", false);
+    setActivity("locally-calibrated", false);
     setActivity("recording", false);
     setActivity("global-action-pending", false);
 
@@ -275,6 +279,9 @@ void AcquisitionController::onStartGlobalCalibration()
     if (!isActive("global-calibration-running"))
     {
         setActivity("global-calibration-running", true);
+        setActivity("global-calibration-continued", false);
+        setActivity("global-calibration-finished", true);
+
         boost::filesystem::path object_path = object_model_dir_;
         object_path = object_path / object_model_display_file_;
         ACTION_GOAL(GlobalCalibration).calibration_object_path = "file://" + object_path.string();
@@ -282,7 +289,11 @@ void AcquisitionController::onStartGlobalCalibration()
                          depth_sensor_vicon_calibration,
                          GlobalCalibration);
     }
-    else if (!isActive("global-calibration-continued"))
+}
+
+void AcquisitionController::onContinueGlobalCalibration()
+{
+    if (!isActive("global-calibration-continued"))
     {
         setActivity("global-calibration-continued", true);
         ACTION_SEND_GOAL(AcquisitionController,
@@ -294,6 +305,9 @@ void AcquisitionController::onStartGlobalCalibration()
 void AcquisitionController::onAbortGlobalCalibration()
 {
     ACTION(GlobalCalibration).cancelAllGoals();
+    setActivity("global-calibration-running", false);
+    setActivity("global-calibration-continued", false);
+    setActivity("global-calibration-finished", false);
     ROS_INFO("Aborting global calibration ...");
 }
 
@@ -301,6 +315,12 @@ void AcquisitionController::onGlobalCalibrationFeedback(int progress, QString st
 {
     ui_.gloablCalibProgressBar->setValue(progress);
     ui_.gloablCalibProgressBar->setFormat(status + " %p%");
+}
+
+void AcquisitionController::onCompleteGlobalCalibration()
+{
+    setActivity("globally-calibrated", true);
+    setActivity("global-calibration-running", false);
 }
 
 void AcquisitionController::onStartDepthSensor()
@@ -428,66 +448,102 @@ void AcquisitionController::onUpdateStatus()
     bool calibrating = isActive("global-calibration-running")
                        || isActive("local-calibration-running");
 
+    // fallback if any sensor is not running anymore
+    setActivity("settings-applied", isActive("settings-applied") && isActive("depth-sensor-running")
+                                                                 && isActive("vicon-connected"));
+
+    // if any connection has been lost, cancel and stop tracking goals and keep state consistent
     ensureStateConsistency(sensor_node_online, vicon_node_online, recorder_node_online);
 
+    // recorder node state
     statusItem("Recorder").status->setIcon(
                 sensor_node_online
                     ? loadPixmap("package://rviz/icons/ok.png")
                     : loadPixmap("package://rviz/icons/warning.png"));
     statusItem("Recorder").status->setText(recorder_node_online ? "Connected" : "Disconnected");
 
-    ui_.startKinectButton->setEnabled(sensor_node_online && !isActive("depth-sensor-running")
-                                                         && !isActive("depth-sensor-starting"));
-    ui_.closeKinectButton->setEnabled(sensor_node_online && isActive("depth-sensor-running"));
-    ui_.deviceModeComboBox->setEnabled(sensor_node_online && isActive("depth-sensor-running"));
-    ui_.applyModeButton->setEnabled(sensor_node_online && isActive("depth-sensor-running"));
-    ui_.deviceModeLabel->setEnabled(sensor_node_online && isActive("depth-sensor-running"));
-
-    ui_.connectViconButton->setEnabled(vicon_node_online && !isActive("vicon-connected"));
-    ui_.disconnectViconButton->setEnabled(vicon_node_online && isActive("vicon-connected"));
-
-    ui_.viconHostIpLineEdit->setEnabled(!isActive("vicon-connected"));
-    ui_.viconMultiCastCheckBox->setEnabled(!isActive("vicon-connected"));
-    ui_.viconMultiCastLineEdit->setEnabled(ui_.viconMultiCastCheckBox->isChecked()
-                                           && !isActive("vicon-connected"));    
-
-    ui_.trackingObjetModelLineEdit->setEnabled(!isActive("using-single-model"));
-    ui_.sameModelCheckBox->setChecked(isActive("using-single-model"));
-
-    ui_.startLocalCalibrationButton->setEnabled(isActive("globally-calibrated"));
-    ui_.abortLocalCalibrationButton->setEnabled(isActive("globally-calibrated"));
-    ui_.completeLocalCalibrationButton->setEnabled(isActive("globally-calibrated"));
-    ui_.localCalibProgressBar->setEnabled(isActive("globally-calibrated"));    
-    ui_.loadLocalCalibButton->setEnabled(isActive("globally-calibrated"));
-    ui_.saveLocalCalibButton->setEnabled(isActive("globally-calibrated"));
-    ui_.localCalibrationLabel->setEnabled(isActive("globally-calibrated"));
-    ui_.localCalibInfo->setEnabled(isActive("globally-calibrated"));
-
-    ui_.startRecordingButton->setEnabled(recorder_node_online && !isActive("recording"));
-    ui_.stopRecordingButton->setEnabled(recorder_node_online && isActive("recording"));
-    ui_.stopAllButton->setEnabled(recorder_node_online && isActive("recording"));
-
-    // fallback if any sensor is not running anymore
-    setActivity("settings-applied", isActive("settings-applied") && isActive("depth-sensor-running")
-                                                                 && isActive("vicon-connected"));
-
-    ui_.submitSettingsButton->setEnabled(!isActive("settings-applied"));
-
+    // globally
     ui_.frameLevel_1->setEnabled(!isActive("global-action-pending"));
 
-    ui_.sensorsBox->setEnabled(sensor_node_online
-                               && vicon_node_online
-                               && !isActive("recording")
-                               && !calibrating);
+    if (isActive("global-action-pending"))
+    {
+        return;
+    }
+
+    // == sensors == //
+    ui_.sensorsBox->setEnabled(sensor_node_online && vicon_node_online
+                                                  && !isActive("recording")
+                                                  && !calibrating);
+    if (ui_.sensorsBox->isEnabled())
+    {
+        // depth sensor section
+        ui_.startKinectButton->setEnabled(sensor_node_online && !isActive("depth-sensor-running")
+                                                             && !isActive("depth-sensor-starting"));
+        ui_.closeKinectButton->setEnabled(sensor_node_online && isActive("depth-sensor-running"));
+        ui_.deviceModeComboBox->setEnabled(sensor_node_online && isActive("depth-sensor-running"));
+        ui_.applyModeButton->setEnabled(sensor_node_online && isActive("depth-sensor-running"));
+        ui_.deviceModeLabel->setEnabled(sensor_node_online && isActive("depth-sensor-running"));
+
+        // vicon section
+        ui_.connectViconButton->setEnabled(vicon_node_online && !isActive("vicon-connected"));
+        ui_.disconnectViconButton->setEnabled(vicon_node_online && isActive("vicon-connected"));
+        ui_.viconHostIpLineEdit->setEnabled(!isActive("vicon-connected"));
+        ui_.viconMultiCastCheckBox->setEnabled(!isActive("vicon-connected"));
+        ui_.viconMultiCastLineEdit->setEnabled(ui_.viconMultiCastCheckBox->isChecked()
+                                               && !isActive("vicon-connected"));
+    }
+
+
+    // == settings == //
     ui_.settingsBox->setEnabled(ui_.sensorsBox->isEnabled() && sensor_node_online
-                                                             && vicon_node_online
-                                                             && isActive("depth-sensor-running")
-                                                             && isActive("vicon-connected")
-                                                             && !isActive("recording")
-                                                             && !calibrating);
+                                                            && vicon_node_online
+                                                            && isActive("depth-sensor-running")
+                                                            && isActive("vicon-connected")
+                                                            && !isActive("recording")
+                                                            && !calibrating);
+    if (ui_.settingsBox->isEnabled())
+    {
+        ui_.trackingObjetModelLineEdit->setEnabled(!isActive("using-single-model"));
+        ui_.sameModelCheckBox->setChecked(isActive("using-single-model"));
+
+        ui_.submitSettingsButton->setEnabled(!isActive("settings-applied"));
+    }
+
+    // == calibration == //
     ui_.calibrationBox->setEnabled(isActive("settings-applied")
                                    || isActive("global-calibration-running"));
+    if (ui_.calibrationBox->isEnabled())
+    {
+        // global calibration
+        ui_.startGlobalCalibrationButton->setEnabled(!isActive("global-calibration-running"));
+        ui_.continueGlobalCalibButton->setEnabled(isActive("global-calibration-running")
+                                                 && !isActive("global-calibration-continued"));
+        ui_.abortGlobalCalibrationButton->setEnabled(isActive("global-calibration-running"));
+        ui_.completeGlobalCalibrationButton->setEnabled(isActive("global-calibration-running")
+                                                        && isActive("global-calibration-finished"));
+        ui_.loadGlobalCalibButton->setEnabled(!isActive("global-calibration-running"));
+        ui_.saveGlobalCalibButton->setEnabled(!isActive("global-calibration-running"));
+
+        // local calibration
+        ui_.localCalibFrame->setEnabled(isActive("globally-calibrated"));
+        ui_.startLocalCalibrationButton->setEnabled(!isActive("local-calibration-running"));
+        ui_.continueLocalCalibButton->setEnabled(isActive("local-calibration-running")
+                                                 && !isActive("local-calibration-continued"));
+        ui_.abortLocalCalibrationButton->setEnabled(isActive("local-calibration-running"));
+        ui_.completeLocalCalibrationButton->setEnabled(isActive("local-calibration-running")
+                                                       && isActive("local-calibration-finished"));
+        ui_.loadLocalCalibButton->setEnabled(!isActive("local-calibration-running"));
+        ui_.saveLocalCalibButton->setEnabled(!isActive("local-calibration-running"));
+    }
+
+    // == recording == //
     ui_.recordingBox->setEnabled(isActive("settings-applied") && !calibrating);
+    if (ui_.recordingBox->isEnabled())
+    {
+        ui_.startRecordingButton->setEnabled(recorder_node_online && !isActive("recording"));
+        ui_.stopRecordingButton->setEnabled(recorder_node_online && isActive("recording"));
+        ui_.stopAllButton->setEnabled(recorder_node_online && isActive("recording"));
+    }
 }
 
 void AcquisitionController::oUpdateFeedback(int vicon_frames, int kinect_frames, u_int64_t duration)
@@ -639,6 +695,8 @@ ACTION_ON_ACTIVE(AcquisitionController, depth_sensor_vicon_calibration, GlobalCa
 {
     ROS_INFO("Starting global calibration ...");
     setActivity("global-calibration-running", true);
+    setActivity("global-calibration-continued", false);
+    setActivity("global-calibration-finished", false);
 }
 
 ACTION_ON_FEEDBACK(AcquisitionController, depth_sensor_vicon_calibration, GlobalCalibration)
@@ -647,13 +705,11 @@ ACTION_ON_FEEDBACK(AcquisitionController, depth_sensor_vicon_calibration, Global
 }
 
 ACTION_ON_DONE(AcquisitionController, depth_sensor_vicon_calibration, GlobalCalibration)
-{
-    setActivity("global-calibration-running", false);
-    setActivity("global-calibration-continued", false);
-
+{    
     switch (state.state_)
     {
     case actionlib::SimpleClientGoalState::SUCCEEDED:
+        setActivity("global-calibration-finished", true);
         ROS_INFO("Global calibration done.");
         break;
     default:

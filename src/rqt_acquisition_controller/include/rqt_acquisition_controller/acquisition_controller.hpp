@@ -94,10 +94,12 @@ namespace rqt_acquisition_controller
         void onSettingsChanged(QString change);
         void onSettingsChanged(int change);
         void onSetStatusIcon(QString setting, QString url);
+
         void onStartGlobalCalibration();
         void onContinueGlobalCalibration();
         void onAbortGlobalCalibration();
         void onGlobalCalibrationFeedback(int progress, QString status);
+        void onCompleteGlobalCalibration();
 
     signals:
         void feedbackReceived(int vicon_frames, int kinect_frames, u_int64_t duration);

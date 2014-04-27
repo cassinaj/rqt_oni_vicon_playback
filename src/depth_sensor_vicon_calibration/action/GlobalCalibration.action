@@ -1,4 +1,5 @@
 string calibration_object_path
+string display_calibration_object_path
 ---
 
 ---

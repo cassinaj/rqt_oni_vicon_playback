@@ -114,7 +114,6 @@
         boost::bind(&current_class_name::action_name##ActiveCB, this),\
         boost::bind(&current_class_name::action_name##FeedbackCB, this, _1))
 
-
 #define ACTION_SHUTDOWN(action_name, is_active)\
     if (action_name##_ac_.isServerConnected()) \
     { \

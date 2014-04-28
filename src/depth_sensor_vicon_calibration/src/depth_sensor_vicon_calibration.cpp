@@ -34,13 +34,15 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
     ROS_INFO("Global calibration started.");
 
     interactive_markers::InteractiveMarkerServer server("calibration_object_marker");
-    server.insert(makeCalibrationObjectMarker(goal->calibration_object_path),
+    server.insert(makeCalibrationObjectMarker(goal->display_calibration_object_path),
                   boost::bind(&Calibration::processFeedback, this, _1));
     server.applyChanges();
 
     GlobalCalibrationResult result;    
 
-    feedback_.procress = 0;
+    int iterrations = 100;
+    feedback_.max_progress = iterrations + 4;
+    feedback_.progress = 0;
     publishStatus("Waiting for calibration object alignment");
 
     // wait to continue
@@ -65,23 +67,23 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
 
     publishStatus("Creating object state estimator ...");
     SpkfObjectTracker object_tracker(node_handler_, "/oni_vicon_recorder");
-    feedback_.procress = 1;
+    feedback_.progress = 1;
 
     publishStatus("Setup estimator parameters ...");
     object_tracker.setupParameters();
-    feedback_.procress = 2;
+    feedback_.progress = 2;
 
     publishStatus("Setup filter ...");
     object_tracker.setupFilter(current_marker_pose_,
                                goal->calibration_object_path.substr(7),
                                goal->display_calibration_object_path);
-    feedback_.procress = 3;
+    feedback_.progress = 3;
 
     publishStatus("Running filter ...");
     object_tracker.run();
-    feedback_.procress = 4;
+    feedback_.progress = 4;
 
-    while (object_tracker.iteration() <= 100)
+    while (object_tracker.iteration() <= iterrations)
     {
         if (!ros::ok())
         {
@@ -98,10 +100,13 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
             return;
         }
 
-        feedback_.procress = object_tracker.iteration() - 4;
-        publishStatus("tracking ...");
+        if (feedback_.progress != object_tracker.iteration())
+        {
+            feedback_.progress = object_tracker.iteration() + 4;
+            publishStatus("Tracking ... ");
+        }
 
-        boost::this_thread::sleep(boost::posix_time::microseconds(50));
+        ros::spinOnce();
     }
 
     object_tracker.shutdown();
@@ -148,7 +153,7 @@ InteractiveMarker Calibration::makeCalibrationObjectMarker(std::string mesh_reso
 {
     // create an interactive marker for our server
     InteractiveMarker int_marker;
-    int_marker.header.frame_id = "/XTION_IR";
+    int_marker.header.frame_id = "/XTION_RGB";
     int_marker.name = "global_calibration_marker";
     int_marker.description = "Global Calibration Object";
 
@@ -206,6 +211,14 @@ InteractiveMarker Calibration::makeCalibrationObjectMarker(std::string mesh_reso
     marker_control.name = "move_y";
     marker_control.interaction_mode = InteractiveMarkerControl::MOVE_AXIS;
     int_marker.controls.push_back(marker_control);
+
+    int_marker.pose.orientation.w = 0.515565;
+    int_marker.pose.orientation.x = 0.856851;
+    int_marker.pose.orientation.y = 0;
+    int_marker.pose.orientation.z = 0;
+    int_marker.pose.position.x = -0.041702;
+    int_marker.pose.position.y = 0.191519;
+    int_marker.pose.position.z = 0.753738;
 
     return int_marker;
 }

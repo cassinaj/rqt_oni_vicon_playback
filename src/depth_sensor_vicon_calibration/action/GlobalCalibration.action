@@ -4,4 +4,5 @@ string display_calibration_object_path
 
 ---
 string status
-int32 procress
+int32 progress
+int32 max_progress

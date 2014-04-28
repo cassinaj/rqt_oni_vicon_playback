@@ -98,13 +98,13 @@ namespace rqt_acquisition_controller
         void onStartGlobalCalibration();
         void onContinueGlobalCalibration();
         void onAbortGlobalCalibration();
-        void onGlobalCalibrationFeedback(int progress, QString status);
+        void onGlobalCalibrationFeedback(int progress, int max_progress, QString status);
         void onCompleteGlobalCalibration();
 
     signals:
         void feedbackReceived(int vicon_frames, int kinect_frames, u_int64_t duration);
         void setStatusIcon(QString setting, QString url);
-        void globalCalibrationFeedback(int progress, QString status);
+        void globalCalibrationFeedback(int progress, int max_progress, QString status);
 
     private: /* implementation details */               
         bool box(QString message, bool rval = false, QMessageBox::Icon type = QMessageBox::Warning);

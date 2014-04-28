@@ -122,8 +122,8 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
             this, SLOT(oUpdateFeedback(int, int, u_int64_t)));
     connect(this, SIGNAL(setStatusIcon(QString,QString)),
             this, SLOT(onSetStatusIcon(QString,QString)));
-    connect(this, SIGNAL(globalCalibrationFeedback(int,QString)),
-            this, SLOT(onGlobalCalibrationFeedback(int,QString)));
+    connect(this, SIGNAL(globalCalibrationFeedback(int,int,QString)),
+            this, SLOT(onGlobalCalibrationFeedback(int,int,QString)));
 
     setActivity("depth-sensor-starting", false);
     setActivity("depth-sensor-running", false);
@@ -283,8 +283,13 @@ void AcquisitionController::onStartGlobalCalibration()
         setActivity("global-calibration-finished", true);
 
         boost::filesystem::path object_path = object_model_dir_;
-        object_path = object_path / object_model_display_file_;
-        ACTION_GOAL(GlobalCalibration).calibration_object_path = "file://" + object_path.string();
+
+        ACTION_GOAL(GlobalCalibration).calibration_object_path =
+                "file://" + (object_path / object_model_tracking_file_).string();
+
+        ACTION_GOAL(GlobalCalibration).display_calibration_object_path =
+                "file://" + (object_path / object_model_display_file_).string();
+
         ACTION_SEND_GOAL(AcquisitionController,
                          depth_sensor_vicon_calibration,
                          GlobalCalibration);
@@ -311,8 +316,9 @@ void AcquisitionController::onAbortGlobalCalibration()
     ROS_INFO("Aborting global calibration ...");
 }
 
-void AcquisitionController::onGlobalCalibrationFeedback(int progress, QString status)
+void AcquisitionController::onGlobalCalibrationFeedback(int progress, int max_progress, QString status)
 {
+    ui_.gloablCalibProgressBar->setMaximum(max_progress);
     ui_.gloablCalibProgressBar->setValue(progress);
     ui_.gloablCalibProgressBar->setFormat(status + " %p%");
 }
@@ -701,7 +707,7 @@ ACTION_ON_ACTIVE(AcquisitionController, depth_sensor_vicon_calibration, GlobalCa
 
 ACTION_ON_FEEDBACK(AcquisitionController, depth_sensor_vicon_calibration, GlobalCalibration)
 {
-    emit globalCalibrationFeedback(feedback->procress, feedback->status.c_str());
+    emit globalCalibrationFeedback(feedback->progress, feedback->max_progress, feedback->status.c_str());
 }
 
 ACTION_ON_DONE(AcquisitionController, depth_sensor_vicon_calibration, GlobalCalibration)

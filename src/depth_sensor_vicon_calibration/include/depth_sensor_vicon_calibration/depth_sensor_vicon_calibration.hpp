@@ -33,6 +33,7 @@ namespace depth_sensor_vicon_calibration
         void publishStatus(std::string status);
 
     private:
+        bool pose_set_;
         ros::NodeHandle node_handler_;
 
         visualization_msgs::InteractiveMarker makeCalibrationObjectMarker(std::string mesh_resource);
@@ -48,8 +49,6 @@ namespace depth_sensor_vicon_calibration
         geometry_msgs::Pose current_marker_pose_;
 
         GlobalCalibrationFeedback feedback_;
-
-
     };
 }
 

@@ -8,6 +8,7 @@ using namespace visualization_msgs;
 using namespace simple_object_tracker;
 
 Calibration::Calibration(ros::NodeHandle& node_handle):
+    pose_set_(false),
     node_handler_(node_handle),
     global_calibration_as_(node_handle,
                            "depth_sensor_vicon_global_calibration",
@@ -40,7 +41,7 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
 
     GlobalCalibrationResult result;    
 
-    int iterrations = 100;
+    int iterrations = 10000;
     feedback_.max_progress = iterrations + 4;
     feedback_.progress = 0;
     publishStatus("Waiting for calibration object alignment");
@@ -114,12 +115,12 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
     global_calibration_as_.setSucceeded(result);
 }
 
-void Calibration::continueGlobalCalibrationCB(const ContinueGlobalCalibrationGoalConstPtr &goal)
+void Calibration::continueGlobalCalibrationCB(const ContinueGlobalCalibrationGoalConstPtr& goal)
 {
      ContinueGlobalCalibrationResult result;
-     ContinueGlobalCalibrationFeedback feedback;
 
      boost::unique_lock<boost::mutex> lock(mutex_);
+
      ROS_INFO("Global calibration continued");
 
      cond_.notify_all();
@@ -146,7 +147,7 @@ void Calibration::publishStatus(std::string status)
 {
     feedback_.status = status;
     global_calibration_as_.publishFeedback(feedback_);
-    ROS_INFO("%s", status.c_str());
+    ROS_INFO_ONCE("%s", status.c_str());
 }
 
 InteractiveMarker Calibration::makeCalibrationObjectMarker(std::string mesh_resource)
@@ -212,6 +213,7 @@ InteractiveMarker Calibration::makeCalibrationObjectMarker(std::string mesh_reso
     marker_control.interaction_mode = InteractiveMarkerControl::MOVE_AXIS;
     int_marker.controls.push_back(marker_control);
 
+    /*
     int_marker.pose.orientation.w = 0.515565;
     int_marker.pose.orientation.x = 0.856851;
     int_marker.pose.orientation.y = 0;
@@ -219,6 +221,26 @@ InteractiveMarker Calibration::makeCalibrationObjectMarker(std::string mesh_reso
     int_marker.pose.position.x = -0.041702;
     int_marker.pose.position.y = 0.191519;
     int_marker.pose.position.z = 0.753738;
+    */
+
+    if (pose_set_)
+    {
+        int_marker.pose = current_marker_pose_;
+    }
+    else
+    {
+        int_marker.pose.orientation.w = 0.439547;
+        int_marker.pose.orientation.x = 0.670696;
+        int_marker.pose.orientation.y = -0.501311;
+        int_marker.pose.orientation.z = 0.325044;
+        int_marker.pose.position.x = -0.097925;
+        int_marker.pose.position.y = 0.2126839;
+        int_marker.pose.position.z = 0.868403;
+
+        current_marker_pose_ = int_marker.pose;
+
+        pose_set_ = true;
+    }
 
     return int_marker;
 }

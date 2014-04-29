@@ -1,4 +1,4 @@
-/spkf_filter/ut_alpha: 0.001
+/spkf_filter/ut_alpha: 0.6
 /spkf_filter/ut_beta: 2.0
 /spkf_filter/ut_kappa: 0.0
 /spkf_filter/mean_depth: 0.75
@@ -6,7 +6,7 @@
 /spkf_filter/measurement_NA_sigma:  1000.0
 /spkf_filter/depth_noise_sigma: 0.005
 /spkf_filter/init_process_sigma: 1.0e-4
-/spkf_filter/validation_gate_distance_thresh: 0.03
+/spkf_filter/validation_gate_distance_thresh: 0.015
 /spkf_filter/n_downsampling: 5
 
 # new process model parameters -------------------------------------------------------------------

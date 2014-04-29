@@ -4,13 +4,20 @@ project(depth_sensor_vicon_calibration)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED roscpp std_msgs message_generation actionlib_msgs actionlib interactive_markers simple_object_tracker)
+find_package(catkin REQUIRED
+    roscpp
+    std_msgs
+    message_generation
+    actionlib_msgs
+    actionlib
+    interactive_markers
+    simple_object_tracker)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
-find_package(PCL 1.3 REQUIRED)
-include_directories(${PCL_INCLUDE_DIRS})
+#find_package(PCL 1.3 REQUIRED)
+#include_directories(${PCL_INCLUDE_DIRS})
 
 
 ## Uncomment this if the package has a setup.py. This macro ensures
@@ -83,7 +90,7 @@ catkin_package(
   INCLUDE_DIRS include
   LIBRARIES depth_sensor_vicon_calibration
   CATKIN_DEPENDS actionlib_msgs actionlib interactive_markers simple_object_tracker
-  DEPENDS eigen
+  DEPENDS
 )
 
 ###########

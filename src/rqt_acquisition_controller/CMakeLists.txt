@@ -31,7 +31,8 @@ set(rqt_acquisition_controller_INCLUDE_DIRECTORIES
 )
 
 
-# find_package(Boost REQUIRED COMPONENTS system)
+find_package(Boost REQUIRED)
+include_directories(${Boost_INCLUDE_DIRS})
 
 ###################################
 ## catkin specific configuration ##
@@ -54,7 +55,7 @@ qt4_wrap_cpp(rqt_acquisition_controller_MOCS ${rqt_acquisition_controller_HEADER
 qt4_wrap_ui(rqt_acquisition_controller_UIS_H ${rqt_acquisition_controller_UIS})
 
 add_library(${PROJECT_NAME} ${rqt_acquisition_controller_SOURCES} ${rqt_acquisition_controller_HEADERS} ${rqt_acquisition_controller_MOCS} ${rqt_acquisition_controller_UIS_H})
-target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY})
+target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY})
 
 
 #############

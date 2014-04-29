@@ -11,7 +11,8 @@ find_package(catkin REQUIRED COMPONENTS
     interactive_markers
     simple_object_tracker)
 
-# find_package(Boost REQUIRED COMPONENTS system)
+find_package(Boost REQUIRED)
+include_directories(${Boost_INCLUDE_DIRS})
 
 ################################################
 ## Declare ROS messages, services and actions ##
@@ -55,6 +56,7 @@ add_library(depth_sensor_vicon_calibration
 
 target_link_libraries(depth_sensor_vicon_calibration
   ${catkin_LIBRARIES}
+  ${Boost_LIBRARIES}
 )
 #############
 ## Install ##

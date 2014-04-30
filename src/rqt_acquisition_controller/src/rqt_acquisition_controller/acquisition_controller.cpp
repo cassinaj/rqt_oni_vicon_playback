@@ -129,6 +129,7 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
     setActivity("depth-sensor-running", false);
     setActivity("chaning-mode", false);
     setActivity("changing-mode", false);
+    setActivity("vicon-connecting", false);
     setActivity("vicon-connected", false);
     setActivity("settings-applied", false);
     setActivity("using-single-model", false);    
@@ -376,6 +377,8 @@ void AcquisitionController::onConnectToVicon()
         return;
     }
 
+    setActivity("vicon-connecting", true);
+
     ACTION_GOAL(ConnectToVicon).retry = 3;
     ACTION_GOAL(ConnectToVicon).host = ui_.viconHostIpLineEdit->text().toStdString();
     ACTION_GOAL(ConnectToVicon).multicast_address =ui_.viconMultiCastLineEdit->text().toStdString();
@@ -491,8 +494,11 @@ void AcquisitionController::onUpdateStatus()
         ui_.deviceModeLabel->setEnabled(sensor_node_online && isActive("depth-sensor-running"));
 
         // vicon section
-        ui_.connectViconButton->setEnabled(vicon_node_online && !isActive("vicon-connected"));
-        ui_.disconnectViconButton->setEnabled(vicon_node_online && isActive("vicon-connected"));
+        ui_.connectViconButton->setEnabled(vicon_node_online && !isActive("vicon-connected")
+                                                             && !isActive("vicon-connecting"));
+        ui_.disconnectViconButton->setEnabled(vicon_node_online
+                                              && (isActive("vicon-connected")
+                                                  || isActive("vicon-connecting")));
         ui_.viconHostIpLineEdit->setEnabled(!isActive("vicon-connected"));
         ui_.viconMultiCastCheckBox->setEnabled(!isActive("vicon-connected"));
         ui_.viconMultiCastLineEdit->setEnabled(ui_.viconMultiCastCheckBox->isChecked()
@@ -648,8 +654,16 @@ ACTION_ON_DONE(AcquisitionController, oni_vicon_recorder, RunDepthSensor)
     ui_.deviceModeComboBox->clear();
     setDepthSensorClosedStatus();
 
-    ROS_INFO("Depth sensor closed");
+    switch (state.state_)
+    {
+    case actionlib::SimpleClientGoalState::SUCCEEDED:
+        ROS_INFO("Depth sensor closed.");
+        break;
+    default:
+        ROS_INFO("Depth sensor failed.");
+    }
 
+    setActivity("depth-sensor-starting", false);
     setActivity("depth-sensor-running", false);
 }
 
@@ -682,6 +696,12 @@ ACTION_ON_FEEDBACK(AcquisitionController, oni_vicon_recorder, ConnectToVicon)
     {        
         statusItem("Vicon").status->setText("Online");
         emit setStatusIcon("Vicon", "package://rviz/icons/ok.png");
+
+        ROS_INFO("Connecting to Vicon system failed.");
+    }
+    else
+    {
+        ROS_INFO("Connected to Vicon system.");
     }
 
     setActivity("vicon-connected", feedback->connected);
@@ -692,8 +712,16 @@ ACTION_ON_DONE(AcquisitionController, oni_vicon_recorder, ConnectToVicon)
     statusItem("Vicon").status->setText("Offline");
     emit setStatusIcon("Vicon", "none");
 
-    ROS_INFO("Vicon system connection closed.");
+    switch (state.state_)
+    {
+    case actionlib::SimpleClientGoalState::SUCCEEDED:
+        ROS_INFO("Vicon system connection closed.");
+        break;
+    default:
+        ROS_INFO("Connecting to Vicon system aborted.");
+    }
 
+    setActivity("vicon-connecting", false);
     setActivity("vicon-connected", false);
 }
 

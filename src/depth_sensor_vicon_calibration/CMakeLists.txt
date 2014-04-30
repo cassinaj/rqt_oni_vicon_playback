@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(depth_sensor_vicon_calibration)
 
-
 find_package(catkin REQUIRED COMPONENTS
     roscpp
     std_msgs

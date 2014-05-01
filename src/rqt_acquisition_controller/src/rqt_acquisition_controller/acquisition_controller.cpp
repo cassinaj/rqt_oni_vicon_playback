@@ -227,6 +227,7 @@ void AcquisitionController::onStartRecording()
 
     ACTION_GOAL(Record).destination = ui_.directoryLineEdit->text().toStdString();
     ACTION_GOAL(Record).name = ui_.recordNameLineEdit->text().toStdString();
+    ACTION_GOAL(Record).object_name = ui_.viconObjectsComboBox->currentText().toStdString();
     ACTION_SEND_GOAL(AcquisitionController, oni_vicon_recorder, Record);
 }
 
@@ -695,13 +696,13 @@ ACTION_ON_FEEDBACK(AcquisitionController, oni_vicon_recorder, ConnectToVicon)
     if (feedback->connected)
     {        
         statusItem("Vicon").status->setText("Online");
-        emit setStatusIcon("Vicon", "package://rviz/icons/ok.png");
+        emit setStatusIcon("Vicon", "package://rviz/icons/ok.png");        
 
-        ROS_INFO("Connecting to Vicon system failed.");
+        ROS_INFO("Connected to Vicon system.");
     }
     else
     {
-        ROS_INFO("Connected to Vicon system.");
+        ROS_INFO("Connecting to Vicon system failed.");
     }
 
     setActivity("vicon-connected", feedback->connected);
@@ -718,7 +719,7 @@ ACTION_ON_DONE(AcquisitionController, oni_vicon_recorder, ConnectToVicon)
         ROS_INFO("Vicon system connection closed.");
         break;
     default:
-        ROS_INFO("Connecting to Vicon system aborted.");
+        ROS_INFO("Connecting to Vicon system failed.");
     }
 
     setActivity("vicon-connecting", false);

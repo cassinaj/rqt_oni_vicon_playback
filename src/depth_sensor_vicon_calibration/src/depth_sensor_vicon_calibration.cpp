@@ -2,6 +2,8 @@
 #include "depth_sensor_vicon_calibration/depth_sensor_vicon_calibration.hpp"
 
 #include <boost/bind.hpp>
+#include <algorithm>
+#include <iterator>
 
 using namespace depth_sensor_vicon_calibration;
 using namespace visualization_msgs;
@@ -9,7 +11,7 @@ using namespace simple_object_tracker;
 
 Calibration::Calibration(ros::NodeHandle& node_handle):
     pose_set_(false),
-    node_handler_(node_handle),
+    node_handle_(node_handle),
     global_calibration_as_(node_handle,
                            "depth_sensor_vicon_global_calibration",
                            boost::bind(&Calibration::globalCalibrationCB, this, _1),
@@ -19,6 +21,8 @@ Calibration::Calibration(ros::NodeHandle& node_handle):
                                     boost::bind(&Calibration::continueGlobalCalibrationCB, this, _1),
                                     false)
 {
+    node_handle_.param("calibration_iterations", calibration_iterations_, 100);
+
     global_calibration_as_.start();
     continue_global_calibration_as_.start();
 }
@@ -41,8 +45,9 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
 
     GlobalCalibrationResult result;    
 
-    int iterrations = 10000;
-    feedback_.max_progress = iterrations + 4;
+    int iterations = calibration_iterations_;
+
+    feedback_.max_progress = iterations + 4;
     feedback_.progress = 0;
     publishStatus("Waiting for calibration object alignment");
 
@@ -67,7 +72,7 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
     ROS_INFO("Calibrating ...");
 
     publishStatus("Creating object state estimator ...");
-    SpkfObjectTracker object_tracker(node_handler_, "/oni_vicon_recorder");
+    SpkfObjectTracker object_tracker(node_handle_, "/oni_vicon_recorder");
     feedback_.progress = 1;
 
     publishStatus("Setup estimator parameters ...");
@@ -84,7 +89,7 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
     object_tracker.run();
     feedback_.progress = 4;
 
-    while (object_tracker.iteration() <= iterrations)
+    while (object_tracker.iteration() <= iterations)
     {
         if (!ros::ok())
         {
@@ -108,6 +113,29 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
         }
 
         ros::spinOnce();
+    }
+
+    oni_vicon_recorder::ViconFrame vicon_frame;
+    vicon_frame.request.object_name = goal->object_name;
+    if (ros::service::call("vicon_frame", vicon_frame))
+    {
+        ROS_INFO("Calibration Vicon frame fetched");
+
+        std::copy(vicon_frame.response.translation.begin(),
+                  vicon_frame.response.translation.end(),
+                  std::ostream_iterator<double>(std::cout, " "));
+        std::cout << std::endl;
+
+        std::copy(vicon_frame.response.rotation.begin(),
+                  vicon_frame.response.rotation.end(),
+                  std::ostream_iterator<double>(std::cout, " "));
+        std::cout << std::endl;
+    }
+    else
+    {
+        publishStatus("Aborted. Retrieving Vicon frame failed");
+        global_calibration_as_.setAborted();
+        object_tracker.shutdown();
     }
 
     object_tracker.shutdown();

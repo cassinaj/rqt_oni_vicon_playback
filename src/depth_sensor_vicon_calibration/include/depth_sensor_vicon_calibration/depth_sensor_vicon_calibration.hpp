@@ -16,6 +16,8 @@
 
 #include <simple_object_tracker/spkf_object_tracker.hpp>
 
+#include <oni_vicon_recorder/ViconFrame.h>
+
 namespace depth_sensor_vicon_calibration
 {
     class Calibration
@@ -34,7 +36,8 @@ namespace depth_sensor_vicon_calibration
 
     private:
         bool pose_set_;
-        ros::NodeHandle node_handler_;
+        ros::NodeHandle node_handle_;
+        int calibration_iterations_;
 
         visualization_msgs::InteractiveMarker makeCalibrationObjectMarker(std::string mesh_resource);
 

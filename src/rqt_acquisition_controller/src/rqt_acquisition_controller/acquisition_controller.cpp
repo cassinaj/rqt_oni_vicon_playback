@@ -286,6 +286,9 @@ void AcquisitionController::onStartGlobalCalibration()
 
         boost::filesystem::path object_path = object_model_dir_;
 
+        ACTION_GOAL(GlobalCalibration).object_name =
+                ui_.viconObjectsComboBox->currentText().toStdString();
+
         ACTION_GOAL(GlobalCalibration).calibration_object_path =
                 "file://" + (object_path / object_model_tracking_file_).string();
 
@@ -328,7 +331,12 @@ void AcquisitionController::onGlobalCalibrationFeedback(int progress, int max_pr
 void AcquisitionController::onCompleteGlobalCalibration()
 {
     setActivity("globally-calibrated", true);
+    setActivity("global-calibration-continued", false);
     setActivity("global-calibration-running", false);
+
+
+
+
 }
 
 void AcquisitionController::onStartDepthSensor()
@@ -580,15 +588,19 @@ void AcquisitionController::oUpdateFeedback(int vicon_frames, int kinect_frames,
 
     std::ostringstream viconFramesStream;
     viconFramesStream << vicon_frames;
+    viconFramesStream << std::fixed << std::setprecision(2);
+    viconFramesStream << " (" << (vicon_frames * 1000. / duration) << " fps)";
     statusItem("Recorded Vicon frames").status->setText(viconFramesStream.str().c_str());
 
     std::ostringstream kinectFramesStream;
     kinectFramesStream << kinect_frames;
+    kinectFramesStream << std::fixed << std::setprecision(2);
+    kinectFramesStream << " (" << (kinect_frames * 1000. / duration) << " fps)";
     statusItem("Recorded Depth Sensor frames").status->setText(kinectFramesStream.str().c_str());
 
     std::ostringstream durationStream;
     durationStream << std::fixed << std::setprecision(2);
-    durationStream << double(duration)/1000.;
+    durationStream << duration/1000.;
     durationStream << " s";
     statusItem("Recording duration").status->setText(durationStream.str().c_str());
 }
@@ -736,7 +748,9 @@ ACTION_ON_ACTIVE(AcquisitionController, depth_sensor_vicon_calibration, GlobalCa
 
 ACTION_ON_FEEDBACK(AcquisitionController, depth_sensor_vicon_calibration, GlobalCalibration)
 {
-    emit globalCalibrationFeedback(feedback->progress, feedback->max_progress, feedback->status.c_str());
+    emit globalCalibrationFeedback(feedback->progress,
+                                   feedback->max_progress,
+                                   feedback->status.c_str());
 }
 
 ACTION_ON_DONE(AcquisitionController, depth_sensor_vicon_calibration, GlobalCalibration)

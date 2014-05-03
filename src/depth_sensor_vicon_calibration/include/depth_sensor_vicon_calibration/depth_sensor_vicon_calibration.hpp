@@ -66,12 +66,9 @@ namespace depth_sensor_vicon_calibration
     class Calibration
     {
     public:
-        typedef actionlib::SimpleActionServer ActionServer;
-
-
-    public:
         Calibration(ros::NodeHandle& node_handle,
-                    int calibration_iterations = 100,
+                    int global_calibration_iterations,
+                    std::string global_calibration_object_name,
                     std::string global_calibration_object,
                     std::string global_calibration_object_display,
                     std::string global_calibration_as_name,
@@ -89,14 +86,17 @@ namespace depth_sensor_vicon_calibration
     private:
         // parameters
         ros::NodeHandle node_handle_;
-        int calibration_iterations_;
+        int global_calibration_iterations_;
+        std::string global_calibration_object_name_;
         std::string global_calibration_object_;
-        std::string global_calibration_object_display_;
+        std::string global_calibration_object_display_;        
 
         // implementation details
         bool pose_set_;
-        ActionServer<GlobalCalibrationAction> global_calibration_as_;
-        ActionServer<ContinueGlobalCalibrationAction> continue_global_calibration_as_;
+        actionlib::SimpleActionServer<GlobalCalibrationAction>
+            global_calibration_as_;
+        actionlib::SimpleActionServer<ContinueGlobalCalibrationAction>
+            continue_global_calibration_as_;
         boost::condition_variable cond_;
         boost::mutex mutex_;
         geometry_msgs::Pose current_marker_pose_;

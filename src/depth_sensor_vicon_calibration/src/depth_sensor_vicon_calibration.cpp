@@ -43,7 +43,6 @@
  * Karlsruhe Institute of Technology (KIT), University of Southern California (USC)
  */
 
-
 #include "depth_sensor_vicon_calibration/depth_sensor_vicon_calibration.hpp"
 
 #include <boost/bind.hpp>
@@ -55,13 +54,15 @@ using namespace visualization_msgs;
 using namespace simple_object_tracker;
 
 Calibration::Calibration(ros::NodeHandle& node_handle,
-                         int calibration_iterations,
+                         int global_calibration_iterations,
+                         std::string global_calibration_object_name,
                          std::string global_calibration_object,
                          std::string global_calibration_object_display,
                          std::string global_calibration_as_name,
                          std::string global_calibration_continue_as_name):
     node_handle_(node_handle),
-    calibration_iterations_(calibration_iterations),
+    global_calibration_iterations_(global_calibration_iterations),
+    global_calibration_object_name_(global_calibration_object_name),
     global_calibration_object_(global_calibration_object),
     global_calibration_object_display_(global_calibration_object_display),
     pose_set_(false),   
@@ -96,7 +97,7 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
 
     GlobalCalibrationResult result;    
 
-    int iterations = calibration_iterations_;
+    int iterations = global_calibration_iterations_;
 
     feedback_.max_progress = iterations + 4;
     feedback_.progress = 0;
@@ -132,7 +133,7 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
 
     publishStatus("Setup filter ...");
     object_tracker.setupFilter(current_marker_pose_,
-                               global_calibration_object_.substr(7),
+                               global_calibration_object_,
                                global_calibration_object_display_);
     feedback_.progress = 3;
 
@@ -160,7 +161,7 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
     }
 
     oni_vicon_recorder::ViconFrame vicon_frame;
-    vicon_frame.request.object_name = goal->object_name;
+    vicon_frame.request.object_name = global_calibration_object_name_;
     if (ros::service::call("vicon_frame", vicon_frame))
     {
         ROS_INFO("Calibration Vicon frame fetched");
@@ -296,5 +297,3 @@ InteractiveMarker Calibration::makeObjectMarker(std::string mesh_resource)
 
     return int_marker;
 }
-
-

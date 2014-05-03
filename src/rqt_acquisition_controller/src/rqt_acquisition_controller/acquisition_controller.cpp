@@ -72,7 +72,7 @@ using namespace rqt_acquisition_controller;
 AcquisitionController::AcquisitionController():
     rqt_gui_cpp::Plugin(),
     widget_(0),
-    ACTION(Record)("start_oni_vicon_recorder", true),
+    ACTION(Record)("oni_vicon_recorder", true),
     ACTION(RunDepthSensor)("run_depth_sensor", true),
     ACTION(ChangeDepthSensorMode)("change_depth_sensor_mode", true),
     ACTION(ConnectToVicon)("connect_to_vicon", true),
@@ -328,6 +328,12 @@ void AcquisitionController::onStartGlobalCalibration()
         setActivity("global-calibration-continued", false);
         setActivity("global-calibration-finished", true);
 
+        box("Adjust the calibration object marker in Rviz and continue calibration.\n" \
+            "Make sure that 'calib_ob' object is defined in the Vicon Tracker!",
+            true,
+            QMessageBox::Information);
+
+        /*
         boost::filesystem::path object_path = object_model_dir_;
 
         ACTION_GOAL(GlobalCalibration).object_name =
@@ -338,6 +344,7 @@ void AcquisitionController::onStartGlobalCalibration()
 
         ACTION_GOAL(GlobalCalibration).display_calibration_object_path =
                 "file://" + (object_path / object_model_display_file_).string();
+        */
 
         ACTION_SEND_GOAL(AcquisitionController,
                          depth_sensor_vicon_calibration,
@@ -365,7 +372,9 @@ void AcquisitionController::onAbortGlobalCalibration()
     ROS_INFO("Aborting global calibration ...");
 }
 
-void AcquisitionController::onGlobalCalibrationFeedback(int progress, int max_progress, QString status)
+void AcquisitionController::onGlobalCalibrationFeedback(int progress,
+                                                        int max_progress,
+                                                        QString status)
 {
     ui_.gloablCalibProgressBar->setMaximum(max_progress);
     ui_.gloablCalibProgressBar->setValue(progress);
@@ -575,9 +584,9 @@ void AcquisitionController::onUpdateStatus()
     }
 
     // == calibration == //
-    ui_.calibrationBox->setEnabled(isActive("settings-applied")
-                                   || isActive("global-calibration-running"));
-    if (ui_.calibrationBox->isEnabled())
+    ui_.globalCalibFrame->setEnabled(isActive("depth-sensor-running")
+                                     && isActive("vicon-connected"));
+    if (ui_.globalCalibFrame->isEnabled())
     {
         // global calibration
         ui_.startGlobalCalibrationButton->setEnabled(!isActive("global-calibration-running"));
@@ -588,9 +597,13 @@ void AcquisitionController::onUpdateStatus()
                                                         && isActive("global-calibration-finished"));
         ui_.loadGlobalCalibButton->setEnabled(!isActive("global-calibration-running"));
         ui_.saveGlobalCalibButton->setEnabled(!isActive("global-calibration-running"));
+    }
 
         // local calibration
-        ui_.localCalibFrame->setEnabled(isActive("globally-calibrated"));
+    ui_.localCalibFrame->setEnabled(isActive("settings-applied")
+                                    && isActive("globally-calibrated"));
+    if (ui_.localCalibFrame->isEnabled())
+    {
         ui_.startLocalCalibrationButton->setEnabled(!isActive("local-calibration-running"));
         ui_.continueLocalCalibButton->setEnabled(isActive("local-calibration-running")
                                                  && !isActive("local-calibration-continued"));

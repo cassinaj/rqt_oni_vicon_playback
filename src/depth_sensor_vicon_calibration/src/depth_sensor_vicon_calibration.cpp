@@ -1,3 +1,48 @@
+/*
+ * Software License Agreement (BSD License)
+ *
+ *  Copyright (c) 2014 Max-Planck-Institute for Intelligent Systems,
+ *                     University of Southern California,
+ *                     Karlsruhe Institute of Technology (KIT)
+ *    Jan Issac (jan.issac@gmail.com)
+ *
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions
+ *  are met:
+ *
+ *   * Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *   * Redistributions in binary form must reproduce the above
+ *     copyright notice, this list of conditions and the following
+ *     disclaimer in the documentation and/or other materials provided
+ *     with the distribution.
+ *   * Neither the name of Willow Garage, Inc. nor the names of its
+ *     contributors may be used to endorse or promote products derived
+ *     from this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ *  FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ *  COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ *  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ *  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ *  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ *  POSSIBILITY OF SUCH DAMAGE.
+ *
+ */
+
+/**
+ * @date 04/26/2014
+ * @author Jan Issac (jan.issac@gmail.com)
+ * Karlsruhe Institute of Technology (KIT), University of Southern California (USC)
+ */
+
 
 #include "depth_sensor_vicon_calibration/depth_sensor_vicon_calibration.hpp"
 
@@ -9,20 +54,26 @@ using namespace depth_sensor_vicon_calibration;
 using namespace visualization_msgs;
 using namespace simple_object_tracker;
 
-Calibration::Calibration(ros::NodeHandle& node_handle):
-    pose_set_(false),
+Calibration::Calibration(ros::NodeHandle& node_handle,
+                         int calibration_iterations,
+                         std::string global_calibration_object,
+                         std::string global_calibration_object_display,
+                         std::string global_calibration_as_name,
+                         std::string global_calibration_continue_as_name):
     node_handle_(node_handle),
+    calibration_iterations_(calibration_iterations),
+    global_calibration_object_(global_calibration_object),
+    global_calibration_object_display_(global_calibration_object_display),
+    pose_set_(false),   
     global_calibration_as_(node_handle,
-                           "depth_sensor_vicon_global_calibration",
+                           global_calibration_as_name,
                            boost::bind(&Calibration::globalCalibrationCB, this, _1),
                            false),
     continue_global_calibration_as_(node_handle,
-                                    "depth_sensor_vicon_global_calibration_continue",
-                                    boost::bind(&Calibration::continueGlobalCalibrationCB, this, _1),
+                                    global_calibration_continue_as_name,
+                                    boost::bind(&Calibration::continueGlobalCalibrationCB, this,_1),
                                     false)
 {
-    node_handle_.param("calibration_iterations", calibration_iterations_, 100);
-
     global_calibration_as_.start();
     continue_global_calibration_as_.start();
 }
@@ -39,7 +90,7 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
     ROS_INFO("Global calibration started.");
 
     interactive_markers::InteractiveMarkerServer server("calibration_object_marker");
-    server.insert(makeCalibrationObjectMarker(goal->display_calibration_object_path),
+    server.insert(makeObjectMarker(global_calibration_object_display_),
                   boost::bind(&Calibration::processFeedback, this, _1));
     server.applyChanges();
 
@@ -81,8 +132,8 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
 
     publishStatus("Setup filter ...");
     object_tracker.setupFilter(current_marker_pose_,
-                               goal->calibration_object_path.substr(7),
-                               goal->display_calibration_object_path);
+                               global_calibration_object_.substr(7),
+                               global_calibration_object_display_);
     feedback_.progress = 3;
 
     publishStatus("Running filter ...");
@@ -91,16 +142,9 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
 
     while (object_tracker.iteration() <= iterations)
     {
-        if (!ros::ok())
+        if (global_calibration_as_.isPreemptRequested() || !ros::ok())
         {
-            publishStatus("Global calibration Aborted. Ros shutting down ...");
-            global_calibration_as_.setAborted();
-            object_tracker.shutdown();
-            return;
-        }
-        else if (global_calibration_as_.isPreemptRequested())
-        {            
-            publishStatus("Aborted. ");
+            publishStatus("Global calibration Aborted.");
             global_calibration_as_.setAborted();
             object_tracker.shutdown();
             return;
@@ -144,16 +188,15 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
 }
 
 void Calibration::continueGlobalCalibrationCB(const ContinueGlobalCalibrationGoalConstPtr& goal)
-{
-     ContinueGlobalCalibrationResult result;
+{     
+    boost::unique_lock<boost::mutex> lock(mutex_);
 
-     boost::unique_lock<boost::mutex> lock(mutex_);
+    ROS_INFO("Global calibration continued");
 
-     ROS_INFO("Global calibration continued");
+    cond_.notify_all();
 
-     cond_.notify_all();
-
-     continue_global_calibration_as_.setSucceeded(result);
+    ContinueGlobalCalibrationResult result;
+    continue_global_calibration_as_.setSucceeded(result);
 }
 
 void Calibration::processFeedback(
@@ -178,7 +221,7 @@ void Calibration::publishStatus(std::string status)
     ROS_INFO_ONCE("%s", status.c_str());
 }
 
-InteractiveMarker Calibration::makeCalibrationObjectMarker(std::string mesh_resource)
+InteractiveMarker Calibration::makeObjectMarker(std::string mesh_resource)
 {
     // create an interactive marker for our server
     InteractiveMarker int_marker;
@@ -241,32 +284,13 @@ InteractiveMarker Calibration::makeCalibrationObjectMarker(std::string mesh_reso
     marker_control.interaction_mode = InteractiveMarkerControl::MOVE_AXIS;
     int_marker.controls.push_back(marker_control);
 
-    /*
-    int_marker.pose.orientation.w = 0.515565;
-    int_marker.pose.orientation.x = 0.856851;
-    int_marker.pose.orientation.y = 0;
-    int_marker.pose.orientation.z = 0;
-    int_marker.pose.position.x = -0.041702;
-    int_marker.pose.position.y = 0.191519;
-    int_marker.pose.position.z = 0.753738;
-    */
-
     if (pose_set_)
     {
         int_marker.pose = current_marker_pose_;
     }
     else
     {
-        int_marker.pose.orientation.w = 0.439547;
-        int_marker.pose.orientation.x = 0.670696;
-        int_marker.pose.orientation.y = -0.501311;
-        int_marker.pose.orientation.z = 0.325044;
-        int_marker.pose.position.x = -0.097925;
-        int_marker.pose.position.y = 0.2126839;
-        int_marker.pose.position.z = 0.868403;
-
         current_marker_pose_ = int_marker.pose;
-
         pose_set_ = true;
     }
 

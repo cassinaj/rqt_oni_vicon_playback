@@ -1,0 +1,19 @@
+/global_calibration/iterations: 20
+/global_calibration/object: "package://depth_sensor_vicon_calibration/object/calib_obj_downsampled.obj"
+/global_calibration/object_display: "package://depth_sensor_vicon_calibration/object/calib_obj.obj"
+
+/spkf_filter/ut_alpha: 0.6
+/spkf_filter/ut_beta: 2.0
+/spkf_filter/ut_kappa: 0.0
+/spkf_filter/mean_depth: 0.75
+/spkf_filter/uncertain_depth_sigma: 1.0
+/spkf_filter/measurement_NA_sigma:  1000.0
+/spkf_filter/depth_noise_sigma: 0.005
+/spkf_filter/init_process_sigma: 1.0e-4
+/spkf_filter/validation_gate_distance_thresh: 0.015
+/spkf_filter/n_downsampling: 5
+
+# new process model parameters -------------------------------------------------------------------
+/spkf_filter/free_linear_acceleration_sigma: 0.1
+/spkf_filter/free_angular_acceleration_sigma: 1.5
+/spkf_filter/free_damping: 5.0

@@ -421,11 +421,6 @@ void Calibration::publishMarker(const geometry_msgs::Pose& pose,
     marker.type = visualization_msgs::Marker::MESH_RESOURCE;
     marker.action = visualization_msgs::Marker::ADD;
     marker.pose = pose;
-            /*
-    marker.pose.position.x = pose.position.x/10.;
-    marker.pose.position.y = pose.position.y/10.;
-    marker.pose.position.z = pose.position.z/10.;
-    */
     marker.mesh_resource = mesh_resource;
 
     pub.publish(marker);

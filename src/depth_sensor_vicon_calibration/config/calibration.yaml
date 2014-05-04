@@ -1,5 +1,5 @@
-/global_calibration/iterations: 50
-/global_calibration/object_name: calib_ob
+/global_calibration/iterations: 20
+/global_calibration/object_name: calibration_object
 /global_calibration/object: "package://depth_sensor_vicon_calibration/object/calib_obj_downsampled.obj"
 /global_calibration/object_display: "package://depth_sensor_vicon_calibration/object/calib_obj.obj"
 

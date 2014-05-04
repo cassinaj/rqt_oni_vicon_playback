@@ -3,7 +3,7 @@
  *
  *  Copyright (c) 2014 Max-Planck-Institute for Intelligent Systems,
  *                     University of Southern California,
- *                     Karlsruhe Institute of Technology (KIT)
+ *                     Karlsruhe Institute of Technology
  *    Jan Issac (jan.issac@gmail.com)
  *
  *  All rights reserved.
@@ -66,18 +66,20 @@
 
 #include <rviz/load_resource.h>
 
+#include <oni_vicon_recorder/namespaces.hpp>
+
 using namespace rviz;
 using namespace rqt_acquisition_controller;
 
 AcquisitionController::AcquisitionController():
     rqt_gui_cpp::Plugin(),
     widget_(0),
-    ACTION(Record)("oni_vicon_recorder", true),
-    ACTION(RunDepthSensor)("run_depth_sensor", true),
-    ACTION(ChangeDepthSensorMode)("change_depth_sensor_mode", true),
-    ACTION(ConnectToVicon)("connect_to_vicon", true),
-    ACTION(GlobalCalibration)("depth_sensor_vicon_global_calibration", true),
-    ACTION(ContinueGlobalCalibration)("depth_sensor_vicon_global_calibration_continue", true)
+    ACTION(Record)(ACTION_NS_RECORD, true),
+    ACTION(RunDepthSensor)(ACTION_NS_RUN_DEPTH_SENSOR, true),
+    ACTION(ChangeDepthSensorMode)(ACTION_NS_CHANGE_DEPTH_SENSOR_MODE, true),
+    ACTION(ConnectToVicon)(ACTION_NS_CONNECT_TO_VICON, true),
+    ACTION(GlobalCalibration)(ACTION_NS_GLOBAL_CALIBRATION, true),
+    ACTION(ContinueGlobalCalibration)(ACTION_NS_CONTINUE_GLOBAL_CALIBRATION, true)
 {
     setObjectName("AcquisitionController");
 }
@@ -86,6 +88,11 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
 {
     // access standalone command line arguments
     QStringList argv = context.argv();
+
+    // get parameters
+    node_handle_.param("/global_calibration/object_name",
+                       global_calib_object_vicon_name_,
+                       std::string("calibration_object"));
 
     // create QWidget
     widget_ = new QWidget();
@@ -102,6 +109,8 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
                 .appendRow(createStatusRow("Device Type", " - "))
                 .appendRow(createStatusRow("Device Name", " - "))
                 .appendRow(createStatusRow("Mode", " - "))))
+        .appendRow(createStatusRow("Global Calibration", "Not calibrated"))
+        .appendRow(createStatusRow("Local Calibration", "Not calibrated"))
         .appendRow(createStatusRow("Recording status", "idle"))
         .appendRow(createStatusRow("Recording duration", "0 s"))
         .appendRow(createStatusRow("Recorded Vicon frames", "0"))
@@ -122,9 +131,13 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
     ui_.startGlobalCalibrationButton->setIcon(loadPixmap("package://rviz/icons/classes/TF.png"));
     ui_.startLocalCalibrationButton->setIcon(loadPixmap("package://rviz/icons/classes/TF.png"));
 
+    // load and render icons
     QPixmap empty_map(16, 16);
     empty_map.fill(QColor(0,0,0,0));
     empty_icon_ = QIcon(empty_map);
+    ok_icon_ = QIcon(loadPixmap("package://rviz/icons/ok.png"));
+    warn_icon_ = QIcon(loadPixmap("package://rviz/icons/warning.png"));
+    failed_icon_ = QIcon(loadPixmap("package://rviz/icons/failed_display.png"));
 
     connect(ui_.startRecordingButton, SIGNAL(clicked()), this, SLOT(onStartRecording()));
     connect(ui_.stopRecordingButton, SIGNAL(clicked()), this, SLOT(onStopRecording()));
@@ -188,6 +201,10 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
     setActivity("recording", false);
     setActivity("global-action-pending", false);
 
+    // change triggers
+    setActivity("prev/globally-calibrated", !isActive("globally-calibrated"));
+    setActivity("prev/locally-calibrated", !isActive("locally-calibrated"));
+
     timer_->start(40);
 }
 
@@ -221,7 +238,7 @@ void AcquisitionController::saveSettings(qt_gui_cpp::Settings& plugin_settings,
 
 void AcquisitionController::restoreSettings(const qt_gui_cpp::Settings& plugin_settings,
                                             const qt_gui_cpp::Settings& instance_settings)
-{
+{          
     ui_.viconHostIpLineEdit->setText(
                 instance_settings.value("vicon_host", "localhost:801").toString());
     ui_.viconMultiCastCheckBox->setChecked(
@@ -292,6 +309,9 @@ void AcquisitionController::onStopAll()
     onCloseDepthSensor();
     if (isActive("changing-mode")) ACTION(ChangeDepthSensorMode).waitForResult(ros::Duration(0.5));
     if (isActive("depth-sensor-running")) ACTION(RunDepthSensor).waitForResult(ros::Duration(0.5));
+
+    onAbortGlobalCalibration();
+    if (isActive("global-calibration-running")) ACTION(GlobalCalibration).waitForResult(ros::Duration(0.5));
 }
 
 void AcquisitionController::onSettingsChanged(QString change)
@@ -328,10 +348,12 @@ void AcquisitionController::onStartGlobalCalibration()
         setActivity("global-calibration-continued", false);
         setActivity("global-calibration-finished", true);
 
-        box("Adjust the calibration object marker in Rviz and continue calibration.\n" \
-            "Make sure that 'calib_ob' object is defined in the Vicon Tracker!",
-            true,
-            QMessageBox::Information);
+        QString msg = "Adjust the calibration object marker in Rviz and continue calibration.\n\n";
+        msg += "Make sure that '";
+        msg += global_calib_object_vicon_name_.c_str();
+        msg += "' object is defined in the Vicon Tracker!";
+
+        box(msg, true, QMessageBox::Information);
 
         /*
         boost::filesystem::path object_path = object_model_dir_;
@@ -499,7 +521,7 @@ void AcquisitionController::onGenerateRecordName()
 void AcquisitionController::onDetectViconObjects()
 {
     oni_vicon_recorder::ViconObjects vicon_objects;
-    if (ros::service::call("detect_vicon_objects", vicon_objects))
+    if (ros::service::call(SERVICE_NS_VICON_OBJECTS, vicon_objects))
     {
         ui_.viconObjectsComboBox->clear();
         ui_.viconObjectsComboBox->addItem("");
@@ -527,11 +549,27 @@ void AcquisitionController::onUpdateStatus()
     ensureStateConsistency(sensor_node_online, vicon_node_online, recorder_node_online);
 
     // recorder node state
-    statusItem("Recorder").status->setIcon(
-                sensor_node_online
-                    ? loadPixmap("package://rviz/icons/ok.png")
-                    : loadPixmap("package://rviz/icons/warning.png"));
+    statusItem("Recorder").status->setIcon(sensor_node_online ? ok_icon_ : warn_icon_);
     statusItem("Recorder").status->setText(recorder_node_online ? "Connected" : "Disconnected");
+
+    // update icons if required
+    if (isActive("prev/globally-calibrated") != isActive("globally-calibrated"))
+    {
+        statusItem("Global Calibration").status->setIcon(
+                    isActive("globally-calibrated") ? ok_icon_ : warn_icon_);
+        statusItem("Global Calibration").status->setText(
+                    isActive("globally-calibrated") ? "Calibrated" : "Not calibrated");
+        setActivity("prev/globally-calibrated", isActive("globally-calibratedn"));
+    }
+
+    if (isActive("prev/locally-calibrated") != isActive("locally-calibrated"))
+    {
+        statusItem("Local Calibration").status->setIcon(
+                    isActive("locally-calibrated") ? ok_icon_ : warn_icon_);
+        statusItem("Local Calibration").status->setText(
+                    isActive("globally-calibrated") ? "Calibrated" : "Not calibrated");
+        setActivity("prev/locally-calibrated", isActive("locally-calibratedn"));
+    }
 
     // globally
     ui_.frameLevel_1->setEnabled(!isActive("global-action-pending"));
@@ -622,6 +660,11 @@ void AcquisitionController::onUpdateStatus()
         ui_.stopRecordingButton->setEnabled(recorder_node_online && isActive("recording"));
         ui_.stopAllButton->setEnabled(recorder_node_online && isActive("recording"));
     }
+
+    ui_.stopAllButton->setEnabled(calibrating
+                                  || isActive("depth-sensor-running")
+                                  || isActive("vicon-connected")
+                                  || isActive("recording"));
 }
 
 void AcquisitionController::oUpdateFeedback(int vicon_frames, int kinect_frames, u_int64_t duration)
@@ -815,11 +858,15 @@ ACTION_ON_DONE(AcquisitionController, depth_sensor_vicon_calibration, GlobalCali
     switch (state.state_)
     {
     case actionlib::SimpleClientGoalState::SUCCEEDED:
-        setActivity("global-calibration-finished", true);
+        setActivity("global-calibration-finished", true);               
         ROS_INFO("Global calibration done.");
         break;
     default:
+        setActivity("global-calibration-running", false);
+        setActivity("global-calibration-continued", false);
+        setActivity("global-calibration-finished", false);
         ROS_INFO("Global calibration aborted.");
+        emit setStatusIcon("Global Calibration", "package://rviz/icons/failed_display.png");
     }
 }
 
@@ -928,11 +975,10 @@ void AcquisitionController::ensureStateConsistency(bool sensor_node_online,
             setActivity("global-calibration-running", false);
             setActivity("local-calibration-running", false);
 
-            QIcon failed_icon = QIcon(loadPixmap("package://rviz/icons/failed_display.png"));
-            statusItem("Recorder").status->setIcon(failed_icon);
-            statusItem("Vicon").status->setIcon(failed_icon);
-            statusItem("Depth Sensor").status->setIcon(failed_icon);
-            statusItem("Recording status").status->setIcon(failed_icon);
+            statusItem("Recorder").status->setIcon(failed_icon_);
+            statusItem("Vicon").status->setIcon(failed_icon_);
+            statusItem("Depth Sensor").status->setIcon(failed_icon_);
+            statusItem("Recording status").status->setIcon(failed_icon_);
         }
     }
 }
@@ -958,7 +1004,7 @@ bool AcquisitionController::validateObjectName(const QString& style_error)
         ui_.objectNameLabel->setStyleSheet(style_error);
         return box("Please specify or select an existing object name in the Vicon scene!");
     }
-    else if (ros::service::call("object_exists_verification", verify_object))
+    else if (ros::service::call(SERVICE_NS_VERIFY_OBJECT_EXISTS, verify_object))
     {
         if (!verify_object.response.exists)
         {

@@ -3,7 +3,7 @@
  *
  *  Copyright (c) 2014 Max-Planck-Institute for Intelligent Systems,
  *                     University of Southern California,
- *                     Karlsruhe Institute of Technology (KIT)
+ *                     Karlsruhe Institute of Technology
  *    Jan Issac (jan.issac@gmail.com)
  *
  *  All rights reserved.
@@ -49,6 +49,8 @@
 #include <algorithm>
 #include <iterator>
 
+#include <oni_vicon_recorder/ViconObjectPose.h>
+
 using namespace depth_sensor_vicon_calibration;
 using namespace visualization_msgs;
 using namespace simple_object_tracker;
@@ -59,12 +61,14 @@ Calibration::Calibration(ros::NodeHandle& node_handle,
                          std::string global_calibration_object,
                          std::string global_calibration_object_display,
                          std::string global_calibration_as_name,
-                         std::string global_calibration_continue_as_name):
+                         std::string global_calibration_continue_as_name,
+                         std::string vicon_object_pose_srv_name):
     node_handle_(node_handle),
     global_calibration_iterations_(global_calibration_iterations),
     global_calibration_object_name_(global_calibration_object_name),
     global_calibration_object_(global_calibration_object),
     global_calibration_object_display_(global_calibration_object_display),
+    vicon_object_pose_srv_name_(vicon_object_pose_srv_name),
     pose_set_(false),   
     global_calibration_as_(node_handle,
                            global_calibration_as_name,
@@ -107,6 +111,13 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
     while (!cond_.timed_wait(lock, boost::posix_time::milliseconds(10))
            && !global_calibration_as_.isPreemptRequested())
     {
+    }
+
+    if (global_calibration_as_.isPreemptRequested())
+    {
+        publishStatus("Global calibration Aborted.");
+        global_calibration_as_.setAborted();
+        return;
     }
 
     server.clear();
@@ -160,27 +171,31 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
         ros::spinOnce();
     }
 
-    oni_vicon_recorder::ViconFrame vicon_frame;
+    oni_vicon_recorder::ViconObjectPose vicon_frame;
     vicon_frame.request.object_name = global_calibration_object_name_;
-    if (ros::service::call("vicon_frame", vicon_frame))
+    if (ros::service::call(vicon_object_pose_srv_name_, vicon_frame))
     {
         ROS_INFO("Calibration Vicon frame fetched");
 
-        std::copy(vicon_frame.response.translation.begin(),
-                  vicon_frame.response.translation.end(),
-                  std::ostream_iterator<double>(std::cout, " "));
-        std::cout << std::endl;
+        ROS_INFO_STREAM("Object pose position ("
+                        << vicon_frame.response.object_pose.position.x << " "
+                        << vicon_frame.response.object_pose.position.y << " "
+                        << vicon_frame.response.object_pose.position.z << ")");
 
-        std::copy(vicon_frame.response.rotation.begin(),
-                  vicon_frame.response.rotation.end(),
-                  std::ostream_iterator<double>(std::cout, " "));
-        std::cout << std::endl;
+        ROS_INFO_STREAM("Object pose orientation ("
+                        << vicon_frame.response.object_pose.orientation.w << " "
+                        << vicon_frame.response.object_pose.orientation.x << " "
+                        << vicon_frame.response.object_pose.orientation.y << " "
+                        << vicon_frame.response.object_pose.orientation.z << ")");
     }
     else
     {
-        publishStatus("Aborted. Retrieving Vicon frame failed");
+        publishStatus("Aborted. Retrieving '"
+                      + global_calibration_object_name_
+                      + "' Vicon frame failed");
         global_calibration_as_.setAborted();
         object_tracker.shutdown();
+        return;
     }
 
     object_tracker.shutdown();
@@ -219,7 +234,7 @@ void Calibration::publishStatus(std::string status)
 {
     feedback_.status = status;
     global_calibration_as_.publishFeedback(feedback_);
-    ROS_INFO_ONCE("%s", status.c_str());
+    ROS_INFO("%s", status.c_str());
 }
 
 InteractiveMarker Calibration::makeObjectMarker(std::string mesh_resource)

@@ -3,7 +3,7 @@
  *
  *  Copyright (c) 2014 Max-Planck-Institute for Intelligent Systems,
  *                     University of Southern California,
- *                     Karlsruhe Institute of Technology (KIT)
+ *                     Karlsruhe Institute of Technology
  *    Jan Issac (jan.issac@gmail.com)
  *
  *  All rights reserved.
@@ -59,8 +59,6 @@
 
 #include <simple_object_tracker/spkf_object_tracker.hpp>
 
-#include <oni_vicon_recorder/ViconFrame.h>
-
 namespace depth_sensor_vicon_calibration
 {
     class Calibration
@@ -72,7 +70,8 @@ namespace depth_sensor_vicon_calibration
                     std::string global_calibration_object,
                     std::string global_calibration_object_display,
                     std::string global_calibration_as_name,
-                    std::string global_calibration_continue_as_name);
+                    std::string global_calibration_continue_as_name,
+                    std::string vicon_object_pose_srv_name);
         ~Calibration();
 
         void globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal);
@@ -89,7 +88,8 @@ namespace depth_sensor_vicon_calibration
         int global_calibration_iterations_;
         std::string global_calibration_object_name_;
         std::string global_calibration_object_;
-        std::string global_calibration_object_display_;        
+        std::string global_calibration_object_display_;
+        std::string vicon_object_pose_srv_name_;
 
         // implementation details
         bool pose_set_;

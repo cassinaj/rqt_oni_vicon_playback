@@ -46,6 +46,8 @@
 #ifndef DEPTH_SENSOR_VICON_CALIBRATION_DEPTH_SENSOR_VICON_CALIBRATION_HPP
 #define DEPTH_SENSOR_VICON_CALIBRATION_DEPTH_SENSOR_VICON_CALIBRATION_HPP
 
+#include <Eigen/Eigen>
+
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/condition_variable.hpp>
 
@@ -56,8 +58,15 @@
 
 #include <depth_sensor_vicon_calibration/GlobalCalibrationAction.h>
 #include <depth_sensor_vicon_calibration/ContinueGlobalCalibrationAction.h>
+#include <depth_sensor_vicon_calibration/CompleteGlobalCalibrationAction.h>
 
 #include <simple_object_tracker/spkf_object_tracker.hpp>
+
+#include <tf/LinearMath/Vector3.h>
+#include <tf/LinearMath/Quaternion.h>
+#include <tf/LinearMath/Scalar.h>
+#include <tf/LinearMath/Transform.h>
+#include <visualization_msgs/Marker.h>
 
 namespace depth_sensor_vicon_calibration
 {
@@ -71,16 +80,25 @@ namespace depth_sensor_vicon_calibration
                     std::string global_calibration_object_display,
                     std::string global_calibration_as_name,
                     std::string global_calibration_continue_as_name,
+                    std::string global_complete_continue_as_name,
                     std::string vicon_object_pose_srv_name);
         ~Calibration();
 
         void globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal);
         void continueGlobalCalibrationCB(const ContinueGlobalCalibrationGoalConstPtr& goal);
+        void completeGlobalCalibrationCB(const CompleteGlobalCalibrationGoalConstPtr& goal);
         void processFeedback(const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
 
     private:        
         void publishStatus(std::string status);
         visualization_msgs::InteractiveMarker makeObjectMarker(std::string mesh_resource);
+        void publishMarker(const geometry_msgs::Pose& pose, std::string mesh_resource,
+                           const ros::Publisher &pub,
+                           int marker_id = 0,
+                           float r = 0,
+                           float g = 1,
+                           float b = 0,
+                           float a = 1.0);
 
     private:
         // parameters
@@ -97,10 +115,15 @@ namespace depth_sensor_vicon_calibration
             global_calibration_as_;
         actionlib::SimpleActionServer<ContinueGlobalCalibrationAction>
             continue_global_calibration_as_;
+        actionlib::SimpleActionServer<CompleteGlobalCalibrationAction>
+            complete_global_calibration_as_;
         boost::condition_variable cond_;
         boost::mutex mutex_;
         geometry_msgs::Pose current_marker_pose_;
         GlobalCalibrationFeedback feedback_;
+
+        ros::Publisher global_calib_publisher_;
+        tf::Transform global_T_;
     };
 }
 

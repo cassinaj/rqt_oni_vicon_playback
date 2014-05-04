@@ -8,10 +8,14 @@ find_package(catkin REQUIRED COMPONENTS
     actionlib_msgs
     actionlib
     interactive_markers
-    simple_object_tracker)
+    simple_object_tracker
+    tf)
 
 find_package(Boost REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
+
+find_package(Eigen REQUIRED)
+include_directories(${Eigen_INCLUDE_DIRS})
 
 ################################################
 ## Declare ROS messages, services and actions ##
@@ -21,11 +25,12 @@ add_action_files(
   FILES
   GlobalCalibration.action
   ContinueGlobalCalibration.action
+  CompleteGlobalCalibration.action
 )
 
 generate_messages(
   DEPENDENCIES
-  std_msgs actionlib_msgs std_msgs
+  std_msgs actionlib_msgs std_msgs visualization_msgs geometry_msgs
 )
 
 ###################################
@@ -34,8 +39,8 @@ generate_messages(
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES depth_sensor_vicon_calibration
-  CATKIN_DEPENDS actionlib_msgs actionlib interactive_markers simple_object_tracker
-  DEPENDS
+  CATKIN_DEPENDS actionlib_msgs actionlib interactive_markers simple_object_tracker tf
+  DEPENDS eigen
 )
 
 ###########

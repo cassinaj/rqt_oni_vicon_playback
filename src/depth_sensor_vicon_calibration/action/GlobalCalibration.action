@@ -3,3 +3,4 @@
 string status
 int32 progress
 int32 max_progress
+bool finished

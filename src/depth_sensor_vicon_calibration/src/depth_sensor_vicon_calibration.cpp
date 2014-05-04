@@ -48,6 +48,8 @@
 #include <boost/bind.hpp>
 #include <algorithm>
 #include <iterator>
+#include <iostream>
+#include <fstream>
 
 #include <oni_vicon_recorder/ViconObjectPose.h>
 
@@ -113,6 +115,7 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
 
     int iterations = global_calibration_iterations_;
 
+    feedback_.finished = false;
     feedback_.max_progress = iterations + 4;
     feedback_.progress = 0;
     publishStatus("Waiting for calibration object alignment");
@@ -141,6 +144,21 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
              current_marker_pose_.orientation.x,
              current_marker_pose_.orientation.y,
              current_marker_pose_.orientation.z);
+
+
+
+    // just to speed things up, write pose to a temp file
+    std::ofstream pose_tmp_file;
+    pose_tmp_file.open ("/tmp/current_marker_pose_.txt");
+    pose_tmp_file << current_marker_pose_.position.x << " ";
+    pose_tmp_file << current_marker_pose_.position.y << " ";
+    pose_tmp_file << current_marker_pose_.position.z << " ";
+    pose_tmp_file << current_marker_pose_.orientation.w << " ";
+    pose_tmp_file << current_marker_pose_.orientation.x << " ";
+    pose_tmp_file << current_marker_pose_.orientation.y << " ";
+    pose_tmp_file << current_marker_pose_.orientation.z;
+    pose_tmp_file.close();
+
 
     ROS_INFO("Calibrating ...");
 
@@ -233,15 +251,37 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
         global_T_.mult(T_o_d, T_o_v.inverse());
 
 
+        feedback_.finished = false;
+        publishStatus("Global calibration ready.");
+
         // wait to complete or abort
         while (!cond_.timed_wait(lock, boost::posix_time::milliseconds(1000./30.))
                && !global_calibration_as_.isPreemptRequested())
         {
-            // while waiting to complete publish pose
-
+            // while waiting to complete publish calibrated pose
             if (ros::service::call(vicon_object_pose_srv_name_, vicon_object_pose))
             {
+                // msg to tf
                 vicon_pose = vicon_object_pose.response.object_pose;
+                tf::Vector3 position(vicon_pose.position.x,
+                                     vicon_pose.position.y,
+                                     vicon_pose.position.z);
+                tf::Quaternion q(vicon_pose.orientation.x,
+                                 vicon_pose.orientation.y,
+                                 vicon_pose.orientation.z,
+                                 vicon_pose.orientation.w);
+                // transform
+                position = global_T_ * position;
+                q = global_T_ * q;
+
+                // tf to msg
+                vicon_pose.position.x = position.getX();
+                vicon_pose.position.y = position.getY();
+                vicon_pose.position.z = position.getZ();
+                vicon_pose.orientation.w = q.getW();
+                vicon_pose.orientation.x = q.getX();
+                vicon_pose.orientation.y = q.getY();
+                vicon_pose.orientation.z = q.getZ();
 
                 publishMarker(vicon_pose,
                               global_calibration_object_display_,
@@ -389,6 +429,20 @@ InteractiveMarker Calibration::makeObjectMarker(std::string mesh_resource)
     }
     else
     {
+        std::ifstream pose_tmp_file;
+        pose_tmp_file.open ("/tmp/current_marker_pose_.txt");
+        if (pose_tmp_file.is_open())
+        {
+            pose_tmp_file >> int_marker.pose.position.x;
+            pose_tmp_file >> int_marker.pose.position.y;
+            pose_tmp_file >> int_marker.pose.position.z;
+            pose_tmp_file >> int_marker.pose.orientation.w;
+            pose_tmp_file >> int_marker.pose.orientation.x;
+            pose_tmp_file >> int_marker.pose.orientation.y;
+            pose_tmp_file >> int_marker.pose.orientation.z;
+            pose_tmp_file.close();
+        }
+
         current_marker_pose_ = int_marker.pose;
         pose_set_ = true;
     }

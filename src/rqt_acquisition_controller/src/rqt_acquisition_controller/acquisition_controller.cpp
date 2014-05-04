@@ -848,6 +848,8 @@ ACTION_ON_FEEDBACK(AcquisitionController, depth_sensor_vicon_calibration, Global
     emit globalCalibrationFeedback(feedback->progress,
                                    feedback->max_progress,
                                    feedback->status.c_str());
+
+    setActivity("global-calibration-finished", feedback->finished);
 }
 
 ACTION_ON_DONE(AcquisitionController, depth_sensor_vicon_calibration, GlobalCalibration)

@@ -71,6 +71,7 @@
 #include <oni_vicon_recorder/ConnectToViconAction.h>
 #include <depth_sensor_vicon_calibration/GlobalCalibrationAction.h>
 #include <depth_sensor_vicon_calibration/ContinueGlobalCalibrationAction.h>
+#include <depth_sensor_vicon_calibration/CompleteGlobalCalibrationAction.h>
 
 #include <ros_action_helper/action_helper.hpp>
 
@@ -94,6 +95,7 @@ namespace rqt_acquisition_controller
     ACTION_IMPLEMENT(oni_vicon_recorder, ChangeDepthSensorMode)
     ACTION_IMPLEMENT(depth_sensor_vicon_calibration, GlobalCalibration)
     ACTION_IMPLEMENT(depth_sensor_vicon_calibration, ContinueGlobalCalibration)
+    ACTION_IMPLEMENT(depth_sensor_vicon_calibration, CompleteGlobalCalibration)
 
     public:
         struct StatusItem

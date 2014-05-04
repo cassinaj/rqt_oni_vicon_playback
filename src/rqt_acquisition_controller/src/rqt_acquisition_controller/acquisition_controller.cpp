@@ -79,7 +79,8 @@ AcquisitionController::AcquisitionController():
     ACTION(ChangeDepthSensorMode)(ACTION_NS_CHANGE_DEPTH_SENSOR_MODE, true),
     ACTION(ConnectToVicon)(ACTION_NS_CONNECT_TO_VICON, true),
     ACTION(GlobalCalibration)(ACTION_NS_GLOBAL_CALIBRATION, true),
-    ACTION(ContinueGlobalCalibration)(ACTION_NS_CONTINUE_GLOBAL_CALIBRATION, true)
+    ACTION(ContinueGlobalCalibration)(ACTION_NS_CONTINUE_GLOBAL_CALIBRATION, true),
+    ACTION(CompleteGlobalCalibration)(ACTION_NS_COMPLETE_GLOBAL_CALIBRATION, true)
 {
     setObjectName("AcquisitionController");
 }
@@ -405,13 +406,9 @@ void AcquisitionController::onGlobalCalibrationFeedback(int progress,
 
 void AcquisitionController::onCompleteGlobalCalibration()
 {
-    setActivity("globally-calibrated", true);
-    setActivity("global-calibration-continued", false);
-    setActivity("global-calibration-running", false);
-
-
-
-
+    ACTION_SEND_GOAL(AcquisitionController,
+                     depth_sensor_vicon_calibration,
+                     CompleteGlobalCalibration);
 }
 
 void AcquisitionController::onStartDepthSensor()
@@ -881,6 +878,33 @@ ACTION_ON_FEEDBACK(AcquisitionController, depth_sensor_vicon_calibration, Contin
 
 ACTION_ON_DONE(AcquisitionController, depth_sensor_vicon_calibration, ContinueGlobalCalibration)
 {
+}
+
+ACTION_ON_ACTIVE(AcquisitionController, depth_sensor_vicon_calibration, CompleteGlobalCalibration)
+{
+}
+
+ACTION_ON_FEEDBACK(AcquisitionController, depth_sensor_vicon_calibration, CompleteGlobalCalibration)
+{
+}
+
+ACTION_ON_DONE(AcquisitionController, depth_sensor_vicon_calibration, CompleteGlobalCalibration)
+{
+    switch (state.state_)
+    {
+    case actionlib::SimpleClientGoalState::SUCCEEDED:
+        ROS_INFO("Global calibration completed.");
+        setActivity("globally-calibrated", true);
+        setActivity("global-calibration-continued", false);
+        setActivity("global-calibration-running", false);
+        setActivity("global-calibration-finished", false);
+        break;
+    default:
+        setActivity("global-calibration-running", false);
+        setActivity("global-calibration-continued", false);
+        setActivity("global-calibration-finished", false);
+        ROS_INFO("Global calibration aborted.");
+    }
 }
 
 // ============================================================================================== //

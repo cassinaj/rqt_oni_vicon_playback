@@ -3,7 +3,7 @@
  *
  *  Copyright (c) 2014 Max-Planck-Institute for Intelligent Systems,
  *                     University of Southern California,
- *                     Karlsruhe Institute of Technology (KIT)
+ *                     Karlsruhe Institute of Technology
  *    Jan Issac (jan.issac@gmail.com)
  *
  *  All rights reserved.
@@ -175,10 +175,15 @@ namespace rqt_acquisition_controller
                                     bool recorder_node_online);
 
     private:
+        ros::NodeHandle node_handle_;
+
         Ui::AcquisitionController ui_;
         QWidget* widget_;
 
         QIcon empty_icon_;
+        QIcon ok_icon_;
+        QIcon warn_icon_;
+        QIcon failed_icon_;
 
         QTimer* timer_;
         QStandardItemModel* status_model_;                
@@ -188,6 +193,7 @@ namespace rqt_acquisition_controller
 
         ros::ServiceClient vicon_object_sc_;
 
+        std::string global_calib_object_vicon_name_;
         std::string object_model_dir_;
         std::string object_model_display_file_;
         std::string object_model_tracking_file_;

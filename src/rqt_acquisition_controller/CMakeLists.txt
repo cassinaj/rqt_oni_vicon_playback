@@ -8,7 +8,8 @@ find_package(catkin REQUIRED COMPONENTS
     actionlib
     rviz
     ros_action_helper
-    depth_sensor_vicon_calibration)
+    depth_sensor_vicon_calibration
+    oni_vicon_recorder)
 
 find_package(Qt4 COMPONENTS QtCore QtGui REQUIRED)
 include(${QT_USE_FILE})
@@ -40,8 +41,14 @@ include_directories(${Boost_INCLUDE_DIRS})
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
-  CATKIN_DEPENDS rqt_gui rqt_gui_cpp  actionlib_msgs actionlib rviz depth_sensor_vicon_calibration
-#  DEPENDS system_lib
+  CATKIN_DEPENDS
+    rqt_gui
+    rqt_gui_cpp
+    actionlib_msgs
+    actionlib
+    rviz
+    depth_sensor_vicon_calibration
+    oni_vicon_recorder
 )
 catkin_python_setup()
 
@@ -49,7 +56,10 @@ catkin_python_setup()
 ## Build ##
 ###########
 
-include_directories(${rqt_acquisition_controller_INCLUDE_DIRECTORIES} ${catkin_INCLUDE_DIRS})
+include_directories(
+    ${rqt_acquisition_controller_INCLUDE_DIRECTORIES}
+    ${catkin_INCLUDE_DIRS}
+)
 
 qt4_wrap_cpp(rqt_acquisition_controller_MOCS ${rqt_acquisition_controller_HEADERS})
 qt4_wrap_ui(rqt_acquisition_controller_UIS_H ${rqt_acquisition_controller_UIS})

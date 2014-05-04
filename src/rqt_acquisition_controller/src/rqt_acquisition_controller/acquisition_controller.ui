@@ -9,7 +9,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>955</width>
+    <width>1215</width>
     <height>1117</height>
    </rect>
   </property>
@@ -106,7 +106,7 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>937</width>
+        <width>1197</width>
         <height>865</height>
        </rect>
       </property>
@@ -837,6 +837,19 @@
              <string>4. Recording</string>
             </property>
             <layout class="QGridLayout" name="gridLayout_7">
+             <item row="0" column="0">
+              <spacer name="horizontalSpacer_2">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>40</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
              <item row="0" column="2">
               <widget class="QPushButton" name="stopRecordingButton">
                <property name="enabled">
@@ -867,23 +880,23 @@
                </property>
               </widget>
              </item>
-             <item row="1" column="2">
-              <widget class="QPushButton" name="stopAllButton">
-               <property name="enabled">
-                <bool>false</bool>
-               </property>
-               <property name="text">
-                <string>                 Stop All</string>
-               </property>
-               <property name="icon">
-                <iconset theme="system-shutdown">
-                 <normaloff/>
-                </iconset>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="0">
-              <spacer name="horizontalSpacer_2">
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QFrame" name="frame">
+            <property name="frameShape">
+             <enum>QFrame::NoFrame</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Plain</enum>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout">
+             <property name="leftMargin">
+              <number>0</number>
+             </property>
+             <item>
+              <spacer name="horizontalSpacer_5">
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
                </property>
@@ -894,6 +907,21 @@
                 </size>
                </property>
               </spacer>
+             </item>
+             <item>
+              <widget class="QPushButton" name="stopAllButton">
+               <property name="enabled">
+                <bool>true</bool>
+               </property>
+               <property name="text">
+                <string>                 Stop All</string>
+               </property>
+               <property name="icon">
+                <iconset theme="system-shutdown">
+                 <normaloff/>
+                </iconset>
+               </property>
+              </widget>
              </item>
             </layout>
            </widget>
@@ -955,7 +983,6 @@
   <tabstop>saveLocalCalibButton</tabstop>
   <tabstop>startRecordingButton</tabstop>
   <tabstop>stopRecordingButton</tabstop>
-  <tabstop>stopAllButton</tabstop>
  </tabstops>
  <resources/>
  <connections/>

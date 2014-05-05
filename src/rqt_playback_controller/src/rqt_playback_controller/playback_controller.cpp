@@ -110,7 +110,6 @@ void PlaybackController::initPlugin(qt_gui_cpp::PluginContext& context)
     ui_.statusTreeView->setMinimumHeight(20 * (status_tree_container_.size() - 1) - 10);
     ui_.statusTreeView->adjustSize();
 
-
     widget_->adjustSize();
 
     timer_ = new QTimer(widget_);
@@ -122,7 +121,6 @@ void PlaybackController::initPlugin(qt_gui_cpp::PluginContext& context)
     ok_icon_ = QIcon(loadPixmap("package://rviz/icons/ok.png"));
     warn_icon_ = QIcon(loadPixmap("package://rviz/icons/warning.png"));
     failed_icon_ = QIcon(loadPixmap("package://rviz/icons/failed_display.png"));
-
 
     timer_->start(40);
 }

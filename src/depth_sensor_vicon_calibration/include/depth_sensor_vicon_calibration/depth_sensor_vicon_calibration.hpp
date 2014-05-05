@@ -68,6 +68,8 @@
 #include <tf/LinearMath/Transform.h>
 #include <visualization_msgs/Marker.h>
 
+#include <tf/transform_broadcaster.h>
+
 namespace depth_sensor_vicon_calibration
 {
     class Calibration
@@ -124,6 +126,9 @@ namespace depth_sensor_vicon_calibration
 
         ros::Publisher global_calib_publisher_;
         tf::Transform global_T_;
+
+        tf::TransformBroadcaster br_;
+        tf::Transform transform_;
     };
 }
 

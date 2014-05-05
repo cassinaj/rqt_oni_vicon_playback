@@ -287,6 +287,27 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
                               global_calibration_object_display_,
                               global_calib_publisher_,
                               0, 1, 0);
+
+                transform_.setOrigin( position );
+                transform_.setRotation( tf::Quaternion(0, 0, 0, 0) );
+                br_.sendTransform(tf::StampedTransform(transform_, ros::Time::now(), "XTION_RGB", "vicon_object_frame"));
+
+                transform_.setOrigin( global_T_.getOrigin() );
+                transform_.setRotation( tf::Quaternion(0, 0, 0, 0) );
+                br_.sendTransform(tf::StampedTransform(transform_, ros::Time::now(), "XTION_RGB", "vicon_wcs"));
+
+
+                depth_sensor_pose = object_tracker.getCurrentPose();
+                tf::Vector3 ds_pos(depth_sensor_pose.position.x,
+                                  depth_sensor_pose.position.y,
+                                  depth_sensor_pose.position.z);
+                tf::Quaternion ds_o(depth_sensor_pose.orientation.x,
+                                     depth_sensor_pose.orientation.y,
+                                     depth_sensor_pose.orientation.z,
+                                     depth_sensor_pose.orientation.w);
+                transform_.setOrigin( ds_pos );
+                transform_.setRotation( ds_o );
+                br_.sendTransform(tf::StampedTransform(transform_, ros::Time::now(), "XTION_RGB", "ds_object_frame"));
             }
         }
 
@@ -306,8 +327,6 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
         object_tracker.shutdown();
         return;
     }
-
-
 
     object_tracker.shutdown();
     ROS_INFO("Global calibration done.");

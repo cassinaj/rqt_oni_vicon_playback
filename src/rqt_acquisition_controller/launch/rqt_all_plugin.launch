@@ -1,0 +1,5 @@
+<launch>
+    <include file="$(find oni_vicon_recorder)/launch/oni_vicon_recorder_local.launch" />
+	<rosparam command="load" file="$(find depth_sensor_vicon_calibration)/config/calibration.yaml" />
+	<node name="rqt_acquisition_controller" type="rqt_acquisition_controller" pkg="rqt_acquisition_controller" output="screen" respawn="false" launch-prefix="" /> <!-- valgrind -->
+</launch>

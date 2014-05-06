@@ -147,11 +147,15 @@ namespace depth_sensor_vicon_calibration
         ros::Publisher global_calib_publisher_;
         tf::Transform global_T_;
 
-        tf::TransformBroadcaster br_;
-        tf::Transform transform_;
-
         boost::condition_variable cond_;
         boost::mutex mutex_;
+
+        tf::TransformBroadcaster br_vicon_;
+        tf::TransformBroadcaster br_ds_obj_;
+        tf::TransformBroadcaster br_vicon_obj_;
+        tf::Transform transform_vicon_;
+        tf::Transform transform_ds_obj_;
+        tf::Transform transform_vicon_obj_;
     };
 }
 

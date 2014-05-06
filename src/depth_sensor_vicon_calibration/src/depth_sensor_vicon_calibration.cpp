@@ -149,26 +149,26 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
     server.applyChanges();
 
     ROS_INFO("Aligned pose: [x,y,z] = [%f, %f, %f], q = [%f, %f, %f, %f]",
-             current_marker_pose_.position.x,
-             current_marker_pose_.position.y,
-             current_marker_pose_.position.z,
-             current_marker_pose_.orientation.w,
-             current_marker_pose_.orientation.x,
-             current_marker_pose_.orientation.y,
-             current_marker_pose_.orientation.z);
+             current_global_marker_pose_.position.x,
+             current_global_marker_pose_.position.y,
+             current_global_marker_pose_.position.z,
+             current_global_marker_pose_.orientation.w,
+             current_global_marker_pose_.orientation.x,
+             current_global_marker_pose_.orientation.y,
+             current_global_marker_pose_.orientation.z);
 
 
 
     // just to speed things up, write pose to a temp file
     std::ofstream pose_tmp_file;
-    pose_tmp_file.open ("/tmp/current_marker_pose_.txt");
-    pose_tmp_file << current_marker_pose_.position.x << " ";
-    pose_tmp_file << current_marker_pose_.position.y << " ";
-    pose_tmp_file << current_marker_pose_.position.z << " ";
-    pose_tmp_file << current_marker_pose_.orientation.w << " ";
-    pose_tmp_file << current_marker_pose_.orientation.x << " ";
-    pose_tmp_file << current_marker_pose_.orientation.y << " ";
-    pose_tmp_file << current_marker_pose_.orientation.z;
+    pose_tmp_file.open ("/tmp/current_global_marker_pose_.txt");
+    pose_tmp_file << current_global_marker_pose_.position.x << " ";
+    pose_tmp_file << current_global_marker_pose_.position.y << " ";
+    pose_tmp_file << current_global_marker_pose_.position.z << " ";
+    pose_tmp_file << current_global_marker_pose_.orientation.w << " ";
+    pose_tmp_file << current_global_marker_pose_.orientation.x << " ";
+    pose_tmp_file << current_global_marker_pose_.orientation.y << " ";
+    pose_tmp_file << current_global_marker_pose_.orientation.z;
     pose_tmp_file.close();
 
 
@@ -183,7 +183,7 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
     feedback_.progress = 2;
 
     publishStatus("Setup filter ...");
-    object_tracker.setupFilter(current_marker_pose_,
+    object_tracker.setupFilter(current_global_marker_pose_,
                                global_calibration_object_,
                                global_calibration_object_display_);
     feedback_.progress = 3;
@@ -300,14 +300,13 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
                               global_calib_publisher_,
                               0, 1, 0);
 
-                transform_.setOrigin( position );
-                transform_.setRotation( tf::Quaternion(0, 0, 0, 0) );
-                br_.sendTransform(tf::StampedTransform(transform_, ros::Time::now(), "XTION_RGB", "vicon_object_frame"));
+                transform_vicon_obj_.setOrigin(position);
+                transform_vicon_obj_.setRotation(q);
+                br_vicon_obj_.sendTransform(tf::StampedTransform(transform_vicon_obj_, ros::Time::now(), "XTION_RGB", "vicon_object_frame"));
 
-                transform_.setOrigin( global_T_.getOrigin() );
-                transform_.setRotation( tf::Quaternion(0, 0, 0, 0) );
-                br_.sendTransform(tf::StampedTransform(transform_, ros::Time::now(), "XTION_RGB", "vicon_wcs"));
-
+                transform_vicon_.setOrigin(global_T_.getOrigin());
+                transform_vicon_.setRotation(global_T_.getRotation());
+                br_vicon_.sendTransform(tf::StampedTransform(transform_vicon_, ros::Time::now(), "XTION_RGB", "vicon_wcs"));
 
                 depth_sensor_pose = object_tracker.getCurrentPose();
                 tf::Vector3 ds_pos(depth_sensor_pose.position.x,
@@ -317,9 +316,9 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
                                      depth_sensor_pose.orientation.y,
                                      depth_sensor_pose.orientation.z,
                                      depth_sensor_pose.orientation.w);
-                transform_.setOrigin( ds_pos );
-                transform_.setRotation( ds_o );
-                br_.sendTransform(tf::StampedTransform(transform_, ros::Time::now(), "XTION_RGB", "ds_object_frame"));
+                transform_ds_obj_.setOrigin(ds_pos);
+                transform_ds_obj_.setRotation(ds_o);
+                br_ds_obj_.sendTransform(tf::StampedTransform(transform_ds_obj_, ros::Time::now(), "XTION_RGB", "ds_object_frame"));
             }
         }
 
@@ -373,15 +372,15 @@ void Calibration::processGlobalCalibrationFeedback(
         const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback)
 {
     ROS_INFO("Current marker pose: [x,y,z] = [%f, %f, %f], q = [%f, %f, %f, %f]",
-             current_marker_pose_.position.x,
-             current_marker_pose_.position.y,
-             current_marker_pose_.position.z,
-             current_marker_pose_.orientation.w,
-             current_marker_pose_.orientation.x,
-             current_marker_pose_.orientation.y,
-             current_marker_pose_.orientation.z);
+             current_global_marker_pose_.position.x,
+             current_global_marker_pose_.position.y,
+             current_global_marker_pose_.position.z,
+             current_global_marker_pose_.orientation.w,
+             current_global_marker_pose_.orientation.x,
+             current_global_marker_pose_.orientation.y,
+             current_global_marker_pose_.orientation.z);
 
-    current_marker_pose_ = feedback->pose;
+    current_global_marker_pose_ = feedback->pose;
 }
 
 void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
@@ -468,12 +467,12 @@ InteractiveMarker Calibration::makeObjectMarker(std::string mesh_resource)
 
     if (pose_set_)
     {
-        int_marker.pose = current_marker_pose_;
+        int_marker.pose = current_global_marker_pose_;
     }
     else
     {
         std::ifstream pose_tmp_file;
-        pose_tmp_file.open ("/tmp/current_marker_pose_.txt");
+        pose_tmp_file.open ("/tmp/current_global_marker_pose_.txt");
         if (pose_tmp_file.is_open())
         {
             pose_tmp_file >> int_marker.pose.position.x;
@@ -486,7 +485,7 @@ InteractiveMarker Calibration::makeObjectMarker(std::string mesh_resource)
             pose_tmp_file.close();
         }
 
-        current_marker_pose_ = int_marker.pose;
+        current_global_marker_pose_ = int_marker.pose;
         pose_set_ = true;
     }
 

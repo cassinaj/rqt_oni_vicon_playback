@@ -64,7 +64,10 @@ Calibration::Calibration(ros::NodeHandle& node_handle,
                          std::string global_calibration_object_display,
                          std::string global_calibration_as_name,
                          std::string global_calibration_continue_as_name,
-                         std::string global_complete_continue_as_name, std::string local_calibration_as_name, std::string local_calibration_continue_as_name, std::string local_complete_continue_as_name,
+                         std::string global_complete_continue_as_name,
+                         std::string local_calibration_as_name,
+                         std::string local_calibration_continue_as_name,
+                         std::string local_complete_continue_as_name,
                          std::string vicon_object_pose_srv_name):
     node_handle_(node_handle),
     global_calibration_iterations_(global_calibration_iterations),
@@ -109,7 +112,6 @@ Calibration::Calibration(ros::NodeHandle& node_handle,
 
 Calibration::~Calibration()
 {
-
 }
 
 void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
@@ -148,28 +150,8 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
     server.clear();
     server.applyChanges();
 
-    ROS_INFO("Aligned pose: [x,y,z] = [%f, %f, %f], q = [%f, %f, %f, %f]",
-             current_global_marker_pose_.position.x,
-             current_global_marker_pose_.position.y,
-             current_global_marker_pose_.position.z,
-             current_global_marker_pose_.orientation.w,
-             current_global_marker_pose_.orientation.x,
-             current_global_marker_pose_.orientation.y,
-             current_global_marker_pose_.orientation.z);
-
-
-
     // just to speed things up, write pose to a temp file
-    std::ofstream pose_tmp_file;
-    pose_tmp_file.open ("/tmp/current_global_marker_pose_.txt");
-    pose_tmp_file << current_global_marker_pose_.position.x << " ";
-    pose_tmp_file << current_global_marker_pose_.position.y << " ";
-    pose_tmp_file << current_global_marker_pose_.position.z << " ";
-    pose_tmp_file << current_global_marker_pose_.orientation.w << " ";
-    pose_tmp_file << current_global_marker_pose_.orientation.x << " ";
-    pose_tmp_file << current_global_marker_pose_.orientation.y << " ";
-    pose_tmp_file << current_global_marker_pose_.orientation.z;
-    pose_tmp_file.close();
+    cachePose(current_global_marker_pose_, "global_pose");
 
 
     ROS_INFO("Calibrating ...");
@@ -215,53 +197,12 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
     vicon_object_pose.request.object_name = global_calibration_object_name_;
     if (ros::service::call(vicon_object_pose_srv_name_, vicon_object_pose))
     {
-        geometry_msgs::Pose vicon_pose = vicon_object_pose.response.object_pose;
-        geometry_msgs::Pose depth_sensor_pose = object_tracker.getCurrentPose();
-
-        ROS_INFO("Calibration Vicon frame fetched");
-
-        ROS_INFO_STREAM("Vicon Object pose position ("
-                        << vicon_pose.position.x << " "
-                        << vicon_pose.position.y << " "
-                        << vicon_pose.position.z << ")");
-
-        ROS_INFO_STREAM("Vicon Object pose orientation ("
-                        << vicon_pose.orientation.w << " "
-                        << vicon_pose.orientation.x << " "
-                        << vicon_pose.orientation.y << " "
-                        << vicon_pose.orientation.z << ")");
-
-        ROS_INFO_STREAM("Depth densor object pose position ("
-                        << depth_sensor_pose.position.x << " "
-                        << depth_sensor_pose.position.y << " "
-                        << depth_sensor_pose.position.z << ")");
-
-        ROS_INFO_STREAM("Depth sensor object pose orientation ("
-                        << depth_sensor_pose.orientation.w << " "
-                        << depth_sensor_pose.orientation.x << " "
-                        << depth_sensor_pose.orientation.y << " "
-                        << depth_sensor_pose.orientation.z << ")");
-
-        tf::Vector3 t_o_v(vicon_pose.position.x,
-                          vicon_pose.position.y,
-                          vicon_pose.position.z);
-        tf::Quaternion q_o_v(vicon_pose.orientation.x,
-                             vicon_pose.orientation.y,
-                             vicon_pose.orientation.z,
-                             vicon_pose.orientation.w);
-        tf::Transform T_o_v(q_o_v, t_o_v);
-
-        tf::Vector3 t_o_d(depth_sensor_pose.position.x,
-                          depth_sensor_pose.position.y,
-                          depth_sensor_pose.position.z);
-        tf::Quaternion q_o_d(depth_sensor_pose.orientation.x,
-                             depth_sensor_pose.orientation.y,
-                             depth_sensor_pose.orientation.z,
-                             depth_sensor_pose.orientation.w);
-        tf::Transform T_o_d(q_o_d, t_o_d);
-
+        // calculate global transformation matrix
+        tf::Transform T_o_v;
+        tf::Transform T_o_d;
+        msgPoseToTfTransform(vicon_object_pose.response.object_pose, T_o_v);
+        msgPoseToTfTransform(object_tracker.getCurrentPose(), T_o_v);
         global_T_.mult(T_o_d, T_o_v.inverse());
-
 
         feedback_.finished = false;
         publishStatus("Global calibration ready.");
@@ -273,52 +214,33 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
             // while waiting to complete publish calibrated pose
             if (ros::service::call(vicon_object_pose_srv_name_, vicon_object_pose))
             {
-                // msg to tf
-                vicon_pose = vicon_object_pose.response.object_pose;
-                tf::Vector3 position(vicon_pose.position.x,
-                                     vicon_pose.position.y,
-                                     vicon_pose.position.z);
-                tf::Quaternion q(vicon_pose.orientation.x,
-                                 vicon_pose.orientation.y,
-                                 vicon_pose.orientation.z,
-                                 vicon_pose.orientation.w);
-                // transform
-                position = global_T_ * position;
-                q = global_T_ * q;
+                // vicon pose to depth sensor pose and publish marker
+                tf::Transform transform_vicon_obj;
+                msgPoseToTfTransform(vicon_object_pose.response.object_pose, transform_vicon_obj);
+                transform_vicon_obj = global_T_ * transform_vicon_obj;
 
-                // tf to msg
-                vicon_pose.position.x = position.getX();
-                vicon_pose.position.y = position.getY();
-                vicon_pose.position.z = position.getZ();
-                vicon_pose.orientation.w = q.getW();
-                vicon_pose.orientation.x = q.getX();
-                vicon_pose.orientation.y = q.getY();
-                vicon_pose.orientation.z = q.getZ();
-
+                geometry_msgs::Pose vicon_pose;
+                tfTransformToMsgPose(transform_vicon_obj, vicon_pose);
                 publishMarker(vicon_pose,
                               global_calibration_object_display_,
                               global_calib_publisher_,
                               0, 1, 0);
 
-                transform_vicon_obj_.setOrigin(position);
-                transform_vicon_obj_.setRotation(q);
-                br_vicon_obj_.sendTransform(tf::StampedTransform(transform_vicon_obj_, ros::Time::now(), "XTION_RGB", "vicon_object_frame"));
-
-                transform_vicon_.setOrigin(global_T_.getOrigin());
-                transform_vicon_.setRotation(global_T_.getRotation());
-                br_vicon_.sendTransform(tf::StampedTransform(transform_vicon_, ros::Time::now(), "XTION_RGB", "vicon_wcs"));
-
-                depth_sensor_pose = object_tracker.getCurrentPose();
-                tf::Vector3 ds_pos(depth_sensor_pose.position.x,
-                                  depth_sensor_pose.position.y,
-                                  depth_sensor_pose.position.z);
-                tf::Quaternion ds_o(depth_sensor_pose.orientation.x,
-                                     depth_sensor_pose.orientation.y,
-                                     depth_sensor_pose.orientation.z,
-                                     depth_sensor_pose.orientation.w);
-                transform_ds_obj_.setOrigin(ds_pos);
-                transform_ds_obj_.setRotation(ds_o);
-                br_ds_obj_.sendTransform(tf::StampedTransform(transform_ds_obj_, ros::Time::now(), "XTION_RGB", "ds_object_frame"));
+                // set coordinates
+                tf::Transform transform_ds_obj;
+                msgPoseToTfTransform(object_tracker.getCurrentPose(), transform_ds_obj);
+                tf_broadcaster_.sendTransform(tf::StampedTransform(transform_ds_obj,
+                                                                   ros::Time::now(),
+                                                                   "XTION_RGB",
+                                                                   "ds_object_frame"));
+                tf_broadcaster_.sendTransform(tf::StampedTransform(transform_vicon_obj,
+                                                                   ros::Time::now(),
+                                                                   "XTION_RGB",
+                                                                   "vicon_object_frame"));
+                tf_broadcaster_.sendTransform(tf::StampedTransform(global_T_,
+                                                                   ros::Time::now(),
+                                                                   "XTION_RGB",
+                                                                   "vicon_wcs"));
             }
         }
 
@@ -371,15 +293,6 @@ void Calibration::completeGlobalCalibrationCB(const CompleteGlobalCalibrationGoa
 void Calibration::processGlobalCalibrationFeedback(
         const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback)
 {
-    ROS_INFO("Current marker pose: [x,y,z] = [%f, %f, %f], q = [%f, %f, %f, %f]",
-             current_global_marker_pose_.position.x,
-             current_global_marker_pose_.position.y,
-             current_global_marker_pose_.position.z,
-             current_global_marker_pose_.orientation.w,
-             current_global_marker_pose_.orientation.x,
-             current_global_marker_pose_.orientation.y,
-             current_global_marker_pose_.orientation.z);
-
     current_global_marker_pose_ = feedback->pose;
 }
 
@@ -394,6 +307,10 @@ void Calibration::continueLocalCalibrationCB(const ContinueLocalCalibrationGoalC
 void Calibration::completeLocalCalibrationCB(const CompleteLocalCalibrationGoalConstPtr& goal)
 {
 }
+
+// ============================================================================================== //
+// == Helper ==================================================================================== //
+// ============================================================================================== //
 
 void Calibration::publishStatus(std::string status)
 {
@@ -471,19 +388,7 @@ InteractiveMarker Calibration::makeObjectMarker(std::string mesh_resource)
     }
     else
     {
-        std::ifstream pose_tmp_file;
-        pose_tmp_file.open ("/tmp/current_global_marker_pose_.txt");
-        if (pose_tmp_file.is_open())
-        {
-            pose_tmp_file >> int_marker.pose.position.x;
-            pose_tmp_file >> int_marker.pose.position.y;
-            pose_tmp_file >> int_marker.pose.position.z;
-            pose_tmp_file >> int_marker.pose.orientation.w;
-            pose_tmp_file >> int_marker.pose.orientation.x;
-            pose_tmp_file >> int_marker.pose.orientation.y;
-            pose_tmp_file >> int_marker.pose.orientation.z;
-            pose_tmp_file.close();
-        }
+        loadPoseFromCache("global_pose", int_marker.pose);
 
         current_global_marker_pose_ = int_marker.pose;
         pose_set_ = true;
@@ -520,4 +425,86 @@ void Calibration::publishMarker(const geometry_msgs::Pose& pose,
     marker.mesh_resource = mesh_resource;
 
     pub.publish(marker);
+}
+
+void Calibration::msgPoseToTfPose(const geometry_msgs::Pose &pose,
+                                  tf::Vector3& position,
+                                  tf::Quaternion& orientation)
+{
+    position.setValue(pose.position.x, pose.position.y, pose.position.z);
+
+    orientation.setValue(pose.orientation.x,
+                         pose.orientation.y,
+                         pose.orientation.z,
+                         pose.orientation.w);
+}
+
+void Calibration::tfPoseToMsgPose(const tf::Vector3& position,
+                                  const tf::Quaternion& orientation,
+                                  geometry_msgs::Pose& pose)
+{
+    pose.position.x = position.getX();
+    pose.position.y = position.getY();
+    pose.position.z = position.getZ();
+
+    pose.orientation.w = orientation.getW();
+    pose.orientation.x = orientation.getX();
+    pose.orientation.y = orientation.getY();
+    pose.orientation.z = orientation.getZ();
+}
+
+void Calibration::msgPoseToTfTransform(const geometry_msgs::Pose& pose,
+                                       tf::Transform& transform)
+{
+    transform.setOrigin(tf::Vector3(pose.position.x, pose.position.y, pose.position.z));
+    transform.setRotation(tf::Quaternion(pose.orientation.x,
+                                         pose.orientation.y,
+                                         pose.orientation.z,
+                                         pose.orientation.w));
+}
+
+void Calibration::tfTransformToMsgPose(const tf::Transform& transform, geometry_msgs::Pose& pose)
+{
+    pose.position.x = transform.getOrigin().getX();
+    pose.position.y = transform.getOrigin().getY();
+    pose.position.z = transform.getOrigin().getZ();
+
+    tf::Quaternion q = transform.getRotation();
+    pose.orientation.w = q.getW();
+    pose.orientation.x = q.getX();
+    pose.orientation.y = q.getY();
+    pose.orientation.z = q.getZ();
+}
+
+void Calibration::cachePose(const geometry_msgs::Pose& pose, const char* dest)
+{
+    std::ofstream pose_tmp_file;
+    std::string cache_file = "/tmp/pose_cache_";
+    cache_file += dest;
+    pose_tmp_file.open (dest);
+    pose_tmp_file << pose.position.x  << " " << pose.position.y << " " << pose.position.z << " ";
+    pose_tmp_file << pose.orientation.w << " "
+                  << pose.orientation.x << " "
+                  << pose.orientation.y << " "
+                  << pose.orientation.z;
+    pose_tmp_file.close();
+}
+
+void Calibration::loadPoseFromCache(const char* src, geometry_msgs::Pose& pose)
+{
+    std::ifstream pose_tmp_file;
+    std::string cache_file = "/tmp/pose_cache_";
+    cache_file += src;
+    pose_tmp_file.open (src);
+    if (pose_tmp_file.is_open())
+    {
+        pose_tmp_file >> pose.position.x;
+        pose_tmp_file >> pose.position.y;
+        pose_tmp_file >> pose.position.z;
+        pose_tmp_file >> pose.orientation.w;
+        pose_tmp_file >> pose.orientation.x;
+        pose_tmp_file >> pose.orientation.y;
+        pose_tmp_file >> pose.orientation.z;
+        pose_tmp_file.close();
+    }
 }

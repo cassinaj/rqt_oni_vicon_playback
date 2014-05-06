@@ -97,14 +97,16 @@ namespace depth_sensor_vicon_calibration
         void globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal);
         void continueGlobalCalibrationCB(const ContinueGlobalCalibrationGoalConstPtr& goal);
         void completeGlobalCalibrationCB(const CompleteGlobalCalibrationGoalConstPtr& goal);
-        void processGlobalCalibrationFeedback(const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
+        void processGlobalCalibrationFeedback(
+                const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
 
         void localCalibrationCB(const LocalCalibrationGoalConstPtr& goal);
         void continueLocalCalibrationCB(const ContinueLocalCalibrationGoalConstPtr& goal);
         void completeLocalCalibrationCB(const CompleteLocalCalibrationGoalConstPtr& goal);
-        void processLocalCalibrationFeedback(const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
+        void processLocalCalibrationFeedback(
+                const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
 
-    private:        
+    private: /* Helper functions */
         void publishStatus(std::string status);
         visualization_msgs::InteractiveMarker makeObjectMarker(std::string mesh_resource);
         void publishMarker(const geometry_msgs::Pose& pose, std::string mesh_resource,
@@ -114,6 +116,17 @@ namespace depth_sensor_vicon_calibration
                            float g = 1,
                            float b = 0,
                            float a = 1.0);
+        void msgPoseToTfPose(const geometry_msgs::Pose& pose,
+                             tf::Vector3& position,
+                             tf::Quaternion& orientation);
+
+        void tfPoseToMsgPose(const tf::Vector3& position,
+                             const tf::Quaternion& orientation,
+                             geometry_msgs::Pose& pose);
+        void msgPoseToTfTransform(const geometry_msgs::Pose& pose, tf::Transform& transform);
+        void tfTransformToMsgPose(const tf::Transform& transform, geometry_msgs::Pose& pose);
+        void cachePose(const geometry_msgs::Pose& pose, const char *dest);
+        void loadPoseFromCache(const char *src, geometry_msgs::Pose& pose);
 
     private:
         // parameters
@@ -150,6 +163,7 @@ namespace depth_sensor_vicon_calibration
         boost::condition_variable cond_;
         boost::mutex mutex_;
 
+        tf::TransformBroadcaster tf_broadcaster_;
         tf::TransformBroadcaster br_vicon_;
         tf::TransformBroadcaster br_ds_obj_;
         tf::TransformBroadcaster br_vicon_obj_;

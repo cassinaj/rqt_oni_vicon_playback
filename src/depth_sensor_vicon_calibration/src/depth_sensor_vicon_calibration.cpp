@@ -245,12 +245,12 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
             if (ros::service::call(vicon_object_pose_srv_name_, vicon_object_pose))
             {
                 // vicon pose to depth sensor pose and publish marker
-                tf::Transform transform_vicon_obj;
-                msgPoseToTfTransform(vicon_object_pose.response.object_pose, transform_vicon_obj);
-                transform_vicon_obj = global_calibration_transform_ * transform_vicon_obj;
+                tf::Transform vicon_obj_transform;
+                msgPoseToTfTransform(vicon_object_pose.response.object_pose, vicon_obj_transform);
+                vicon_obj_transform = global_calibration_transform_ * vicon_obj_transform;
 
                 geometry_msgs::Pose vicon_pose;
-                tfTransformToMsgPose(transform_vicon_obj, vicon_pose);
+                tfTransformToMsgPose(vicon_obj_transform, vicon_pose);
                 publishMarker(vicon_pose,
                               global_calibration_object_display_,
                               global_calib_publisher_,
@@ -263,7 +263,7 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
                                                                    ros::Time::now(),
                                                                    "XTION_RGB",
                                                                    "ds_object_frame"));
-                tf_broadcaster_.sendTransform(tf::StampedTransform(transform_vicon_obj,
+                tf_broadcaster_.sendTransform(tf::StampedTransform(vicon_obj_transform,
                                                                    ros::Time::now(),
                                                                    "XTION_RGB",
                                                                    "vicon_object_frame"));
@@ -435,7 +435,7 @@ void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
         tf::Transform T_o_d;
         msgPoseToTfTransform(vicon_object_pose.response.object_pose, T_o_v);
         msgPoseToTfTransform(object_tracker.getCurrentPose(), T_o_d);
-        local_calibration_transform_ = T_o_d.inverse() * global_calibration_transform_ * T_o_v;
+        local_calibration_transform_ = T_o_d * global_calibration_transform_ * T_o_v;
 
         feedback.finished = true;
         publishLocalStatus("Local calibration ready.", feedback);

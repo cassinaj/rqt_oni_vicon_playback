@@ -288,14 +288,13 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
                               global_calib_publisher_,
                               0, 1, 0);
 
-                transform_.setOrigin( position );
-                transform_.setRotation( tf::Quaternion(0, 0, 0, 0) );
-                br_.sendTransform(tf::StampedTransform(transform_, ros::Time::now(), "XTION_RGB", "vicon_object_frame"));
+                transform_vicon_obj_.setOrigin(position);
+                transform_vicon_obj_.setRotation(q);
+                br_vicon_obj_.sendTransform(tf::StampedTransform(transform_vicon_obj_, ros::Time::now(), "XTION_RGB", "vicon_object_frame"));
 
-                transform_.setOrigin( global_T_.getOrigin() );
-                transform_.setRotation( tf::Quaternion(0, 0, 0, 0) );
-                br_.sendTransform(tf::StampedTransform(transform_, ros::Time::now(), "XTION_RGB", "vicon_wcs"));
-
+                transform_vicon_.setOrigin(global_T_.getOrigin());
+                transform_vicon_.setRotation(global_T_.getRotation());
+                br_vicon_.sendTransform(tf::StampedTransform(transform_vicon_, ros::Time::now(), "XTION_RGB", "vicon_wcs"));
 
                 depth_sensor_pose = object_tracker.getCurrentPose();
                 tf::Vector3 ds_pos(depth_sensor_pose.position.x,
@@ -305,9 +304,9 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
                                      depth_sensor_pose.orientation.y,
                                      depth_sensor_pose.orientation.z,
                                      depth_sensor_pose.orientation.w);
-                transform_.setOrigin( ds_pos );
-                transform_.setRotation( ds_o );
-                br_.sendTransform(tf::StampedTransform(transform_, ros::Time::now(), "XTION_RGB", "ds_object_frame"));
+                transform_ds_obj_.setOrigin(ds_pos);
+                transform_ds_obj_.setRotation(ds_o);
+                br_ds_obj_.sendTransform(tf::StampedTransform(transform_ds_obj_, ros::Time::now(), "XTION_RGB", "ds_object_frame"));
             }
         }
 

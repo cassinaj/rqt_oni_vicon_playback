@@ -1,6 +1,8 @@
 string calibration_object_name
 string calibration_object
 string calibration_object_display
+string calibration_object_dir
+string calibration_object_package
 ---
 ---
 string status

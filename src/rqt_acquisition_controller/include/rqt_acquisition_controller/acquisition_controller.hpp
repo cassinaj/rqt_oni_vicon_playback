@@ -210,7 +210,7 @@ namespace rqt_acquisition_controller
         ros::ServiceClient vicon_object_sc_;
 
         std::string global_calib_object_vicon_name_;
-        std::string object_model_dir_;
+        std::string object_model_package_;
         std::string object_model_display_file_;
         std::string object_model_tracking_file_;
     };

@@ -129,8 +129,8 @@ namespace depth_sensor_vicon_calibration
                              geometry_msgs::Pose& pose);
         void msgPoseToTfTransform(const geometry_msgs::Pose& pose, tf::Transform& transform);
         void tfTransformToMsgPose(const tf::Transform& transform, geometry_msgs::Pose& pose);
-        void cachePose(const geometry_msgs::Pose& pose, const char *dest);
-        void loadPoseFromCache(const char *src, geometry_msgs::Pose& pose);
+        void cachePose(const geometry_msgs::Pose& pose, const std::string dest);
+        void loadPoseFromCache(const std::string src, geometry_msgs::Pose& pose);
 
     private:
         // parameters
@@ -168,9 +168,11 @@ namespace depth_sensor_vicon_calibration
         tf::Transform global_calibration_transform_;
         tf::Transform local_calibration_transform_;
 
+        bool global_calibration_complete_;
         boost::condition_variable global_calib_cond_;
         boost::mutex global_calib_mutex_;
 
+        bool local_calibration_complete_;
         boost::condition_variable local_calib_cond_;
         boost::mutex local_calib_mutex_;
 

@@ -119,7 +119,7 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
         .appendRow(createStatusRow("Recording duration", "0 s"))
         .appendRow(createStatusRow("Recorded Vicon frames", "0"))
         .appendRow(createStatusRow("Recorded Depth Sensor frames", "0"))
-        .appendRow(createStatusRow("Object Model Dir.", " - "))
+        .appendRow(createStatusRow("Object Model Pkg.", " - "))
         .appendRow(createStatusRow("Display Object Model File", " - "))
         .appendRow(createStatusRow("Tracking Object Model File", " - "));
 
@@ -157,15 +157,23 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
     connect(ui_.sameModelCheckBox, SIGNAL(toggled(bool)), this, SLOT(onToggleSameModel(bool)));
     connect(ui_.detectObjectNameButton, SIGNAL(clicked()), this, SLOT(onDetectViconObjects()));
 
-    connect(ui_.startGlobalCalibrationButton, SIGNAL(clicked()), this, SLOT(onStartGlobalCalibration()));
-    connect(ui_.abortGlobalCalibrationButton, SIGNAL(clicked()), this, SLOT(onAbortGlobalCalibration()));
-    connect(ui_.continueGlobalCalibButton, SIGNAL(clicked()), this, SLOT(onContinueGlobalCalibration()));
-    connect(ui_.completeGlobalCalibrationButton, SIGNAL(clicked()), this, SLOT(onCompleteGlobalCalibration()));
+    connect(ui_.startGlobalCalibrationButton, SIGNAL(clicked()),
+            this, SLOT(onStartGlobalCalibration()));
+    connect(ui_.abortGlobalCalibrationButton, SIGNAL(clicked()),
+            this, SLOT(onAbortGlobalCalibration()));
+    connect(ui_.continueGlobalCalibButton, SIGNAL(clicked()),
+            this, SLOT(onContinueGlobalCalibration()));
+    connect(ui_.completeGlobalCalibrationButton, SIGNAL(clicked()),
+            this, SLOT(onCompleteGlobalCalibration()));
 
-    connect(ui_.startLocalCalibrationButton, SIGNAL(clicked()), this, SLOT(onStartLocalCalibration()));
-    connect(ui_.abortLocalCalibrationButton, SIGNAL(clicked()), this, SLOT(onAbortLocalCalibration()));
-    connect(ui_.continueLocalCalibButton, SIGNAL(clicked()), this, SLOT(onContinueLocalCalibration()));
-    connect(ui_.completeLocalCalibrationButton, SIGNAL(clicked()), this, SLOT(onCompleteLocalCalibration()));
+    connect(ui_.startLocalCalibrationButton, SIGNAL(clicked()),
+            this, SLOT(onStartLocalCalibration()));
+    connect(ui_.abortLocalCalibrationButton, SIGNAL(clicked()),
+            this, SLOT(onAbortLocalCalibration()));
+    connect(ui_.continueLocalCalibButton, SIGNAL(clicked()),
+            this, SLOT(onContinueLocalCalibration()));
+    connect(ui_.completeLocalCalibrationButton, SIGNAL(clicked()),
+            this, SLOT(onCompleteLocalCalibration()));
 
     connect(timer_, SIGNAL(timeout()), this, SLOT(onUpdateStatus()));
     connect(ui_.sameModelCheckBox, SIGNAL(stateChanged(int)), this, SLOT(onSettingsChanged(int)));
@@ -323,10 +331,16 @@ void AcquisitionController::onStopAll()
     if (isActive("depth-sensor-running")) ACTION(RunDepthSensor).waitForResult(ros::Duration(0.5));
 
     onAbortGlobalCalibration();
-    if (isActive("global-calibration-running")) ACTION(GlobalCalibration).waitForResult(ros::Duration(0.5));
+    if (isActive("global-calibration-running"))
+    {
+        ACTION(GlobalCalibration).waitForResult(ros::Duration(0.5));
+    }
 
     onAbortLocalCalibration();
-    if (isActive("local-calibration-running")) ACTION(LocalCalibration).waitForResult(ros::Duration(0.5));
+    if (isActive("local-calibration-running"))
+    {
+        ACTION(LocalCalibration).waitForResult(ros::Duration(0.5));
+    }
 }
 
 void AcquisitionController::onSettingsChanged(QString change)
@@ -924,16 +938,17 @@ ACTION_ON_DONE(AcquisitionController, depth_sensor_vicon_calibration, GlobalCali
     switch (state.state_)
     {
     case actionlib::SimpleClientGoalState::SUCCEEDED:
-        setActivity("global-calibration-finished", true);               
+        setActivity("globally-calibrated", true);
         ROS_INFO("Global calibration done.");
         break;
     default:
-        setActivity("global-calibration-running", false);
-        setActivity("global-calibration-continued", false);
-        setActivity("global-calibration-finished", false);
         ROS_INFO("Global calibration aborted.");
         emit setStatusIcon("Global Calibration", "package://rviz/icons/failed_display.png");
     }
+
+    setActivity("global-calibration-running", false);
+    setActivity("global-calibration-continued", false);
+    setActivity("global-calibration-finished", false);
 }
 
 ACTION_ON_ACTIVE(AcquisitionController, depth_sensor_vicon_calibration, ContinueGlobalCalibration)
@@ -959,11 +974,11 @@ ACTION_ON_FEEDBACK(AcquisitionController, depth_sensor_vicon_calibration, Comple
 
 ACTION_ON_DONE(AcquisitionController, depth_sensor_vicon_calibration, CompleteGlobalCalibration)
 {
+    /*
     switch (state.state_)
     {
     case actionlib::SimpleClientGoalState::SUCCEEDED:
         ROS_INFO("Global calibration completed.");
-        setActivity("globally-calibrated", true);
         setActivity("global-calibration-continued", false);
         setActivity("global-calibration-running", false);
         setActivity("global-calibration-finished", false);
@@ -974,6 +989,85 @@ ACTION_ON_DONE(AcquisitionController, depth_sensor_vicon_calibration, CompleteGl
         setActivity("global-calibration-finished", false);
         ROS_INFO("Global calibration aborted.");
     }
+    */
+}
+
+
+ACTION_ON_ACTIVE(AcquisitionController, depth_sensor_vicon_calibration, LocalCalibration)
+{
+    ROS_INFO("Starting local calibration ...");
+    setActivity("local-calibration-running", true);
+    setActivity("local-calibration-continued", false);
+    setActivity("local-calibration-finished", false);
+}
+
+ACTION_ON_FEEDBACK(AcquisitionController, depth_sensor_vicon_calibration, LocalCalibration)
+{
+    emit localCalibrationFeedback(feedback->progress,
+                                  feedback->max_progress,
+                                  feedback->status.c_str());
+
+    setActivity("local-calibration-finished", feedback->finished);
+}
+
+ACTION_ON_DONE(AcquisitionController, depth_sensor_vicon_calibration, LocalCalibration)
+{
+    switch (state.state_)
+    {
+    case actionlib::SimpleClientGoalState::SUCCEEDED:
+        setActivity("locally-calibrated", true);
+        ROS_INFO("Local calibration done.");
+        break;
+    default:
+        ROS_INFO("Local calibration aborted.");
+        emit setStatusIcon("Local Calibration", "package://rviz/icons/failed_display.png");
+    }
+
+    setActivity("local-calibration-running", false);
+    setActivity("local-calibration-continued", false);
+    setActivity("local-calibration-finished", false);
+}
+
+ACTION_ON_ACTIVE(AcquisitionController, depth_sensor_vicon_calibration, ContinueLocalCalibration)
+{
+    ROS_INFO("Continue local calibration ...");
+}
+
+ACTION_ON_FEEDBACK(AcquisitionController, depth_sensor_vicon_calibration, ContinueLocalCalibration)
+{
+}
+
+ACTION_ON_DONE(AcquisitionController, depth_sensor_vicon_calibration, ContinueLocalCalibration)
+{
+}
+
+ACTION_ON_ACTIVE(AcquisitionController, depth_sensor_vicon_calibration, CompleteLocalCalibration)
+{
+}
+
+ACTION_ON_FEEDBACK(AcquisitionController, depth_sensor_vicon_calibration, CompleteLocalCalibration)
+{
+}
+
+ACTION_ON_DONE(AcquisitionController, depth_sensor_vicon_calibration, CompleteLocalCalibration)
+{
+    /*
+    switch (state.state_)
+    {
+    case actionlib::SimpleClientGoalState::SUCCEEDED:
+        ROS_INFO("Local calibration completed.");
+
+        setActivity("local-calibration-continued", false);
+        setActivity("local-calibration-running", false);
+        setActivity("local-calibration-finished", false);
+        break;
+    default:
+        setActivity("local-calibration-running", false);
+        setActivity("local-calibration-continued", false);
+        setActivity("local-calibration-finished", false);
+        ROS_INFO("Local calibration aborted.");
+    }
+    */
 }
 
 // ============================================================================================== //
@@ -1161,31 +1255,21 @@ bool AcquisitionController::validateModelLocation(const QString& style_error)
     std::string src = ui_.objectModelPackageLineEdit->text().toStdString();
     if (src.empty())
     {
-        statusItem("Object Model Dir.").status->setText(" - ");
+        statusItem("Object Model Pkg.").status->setText(" - ");
         ui_.objectModelPackageLabel->setStyleSheet(style_error);
         return box("Please enter the object model ros package name or a directory!");
     }
 
-    bool valid = false;
-    if (boost::filesystem::exists(src))
-    {
-        object_model_dir_ = src;
-        valid = true;
-    }
-    else
-    {
-        object_model_dir_ = ros::package::getPath(src);
-        valid = !object_model_dir_.empty();
-    }
+    object_model_package_ = src;
 
-    if (!valid)
+    if (ros::package::getPath(src).empty())
     {
-        statusItem("Object Model Dir.").status->setText(" - ");
+        statusItem("Object Model Pkg.").status->setText(" - ");
         ui_.objectModelPackageLabel->setStyleSheet(style_error);
         return box("The specified object model location is neither a directory nor a ros package.");
     }
 
-    statusItem("Object Model Dir.").status->setText(object_model_dir_.c_str());
+    statusItem("Object Model Pkg.").status->setText(object_model_package_.c_str());
     ui_.objectModelPackageLabel->setStyleSheet("");
     return true;
 }
@@ -1193,22 +1277,24 @@ bool AcquisitionController::validateModelLocation(const QString& style_error)
 bool AcquisitionController::validateDisplayModelFile(const QString& style_error)
 {
     boost::filesystem::path file = ui_.displayObjetModelLineEdit->text().toStdString();
-    boost::filesystem::path file_path = object_model_dir_;
+    boost::filesystem::path file_path = ros::package::getPath(object_model_package_);
 
-    if(!object_model_dir_.empty())
+    if(!object_model_package_.empty())
     {
         if (boost::filesystem::exists(file_path / file))
         {
-            object_model_display_file_ = file.string();
+            object_model_display_file_ =
+                    "package://" + (object_model_package_ / file).string();
             statusItem("Display Object Model File").status->setText(file.c_str());
             ui_.displayObjectModelFileLabel->setStyleSheet("");
             return true;
         }
         else if (boost::filesystem::exists(file_path / "objects" / file))
         {
-            object_model_display_file_ = ("objects" / file).string();
+            object_model_display_file_ =
+                    "package://" +  (object_model_package_  / ("objects" / file)).string();
             statusItem("Display Object Model File").status->setText(
-                        object_model_display_file_.c_str());
+                        ("/objects" / file).c_str());
             ui_.displayObjectModelFileLabel->setStyleSheet("");
             return true;
         }
@@ -1225,22 +1311,24 @@ bool AcquisitionController::validateTrackingModelFile(const QString& style_error
     if (!ui_.sameModelCheckBox->isChecked())
     {
         boost::filesystem::path file = ui_.trackingObjetModelLineEdit->text().toStdString();
-        boost::filesystem::path file_path = object_model_dir_;
+        boost::filesystem::path file_path = ros::package::getPath(object_model_package_);
 
-        if(!object_model_dir_.empty())
+        if(!object_model_package_.empty())
         {
             if (boost::filesystem::exists(file_path / file))
             {
-                object_model_tracking_file_ = file.string();
+                object_model_tracking_file_ =
+                        "package://" +  (object_model_package_ / file).string();
                 statusItem("Tracking Object Model File").status->setText(file.c_str());
                 ui_.trackingObjectModelLabel->setStyleSheet("");
                 return true;
             }
             else if (boost::filesystem::exists(file_path / "objects" / file))
             {
-                object_model_tracking_file_ = ("objects" / file).string();
+                object_model_tracking_file_ =
+                        "package://" + (object_model_package_ / ("objects" / file)).string();
                 statusItem("Tracking Object Model File").status->setText(
-                            object_model_tracking_file_.c_str());
+                            ("objects" / file).c_str());
                 ui_.trackingObjectModelLabel->setStyleSheet("");
                 return true;
             }

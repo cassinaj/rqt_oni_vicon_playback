@@ -102,7 +102,9 @@ Calibration::Calibration(ros::NodeHandle& node_handle,
     complete_local_calibration_as_(node_handle,
                                   local_complete_continue_as_name,
                                   boost::bind(&Calibration::completeLocalCalibrationCB, this,_1),
-                                  false)
+                                  false),
+    global_calibration_complete_(false),
+    local_calibration_complete_(false)
 {
     global_calib_publisher_ =
             node_handle_.advertise<visualization_msgs::Marker>("global_calibration_pose", 0);
@@ -140,8 +142,6 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
     interactive_markers::InteractiveMarkerServer server("calibration_object_marker");
     InteractiveMarker global_calib_maker = makeObjectMarker(global_calibration_object_display_,
                                                             "global_calibration_marker");
-    server.insert(global_calib_maker,
-                  boost::bind(&Calibration::processGlobalCalibrationFeedback, this, _1));
     if (global_pose_set_)
     {
         global_calib_maker.pose = current_global_marker_pose_;
@@ -152,6 +152,8 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
         current_global_marker_pose_ = global_calib_maker.pose;
         global_pose_set_ = true;
     }
+    server.insert(global_calib_maker,
+                  boost::bind(&Calibration::processGlobalCalibrationFeedback, this, _1));
     server.applyChanges();
 
     GlobalCalibrationResult result;    
@@ -235,6 +237,7 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
         publishGlobalStatus("Global calibration ready.", feedback);
 
         // wait to complete or abort
+        global_calibration_complete_ = false;
         while (!global_calib_cond_.timed_wait(lock, boost::posix_time::milliseconds(1000./30.))
                && !global_calibration_as_.isPreemptRequested())
         {
@@ -271,7 +274,7 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
             }
         }
 
-        if (global_calibration_as_.isPreemptRequested())
+        if (global_calibration_as_.isPreemptRequested() && !global_calibration_complete_)
         {
             publishGlobalStatus("Global calibration Aborted.", feedback);
             global_calibration_as_.setAborted();
@@ -311,10 +314,12 @@ void Calibration::completeGlobalCalibrationCB(const CompleteGlobalCalibrationGoa
 
     ROS_INFO("Completing global calibration ...");
 
+    global_calibration_complete_ = true;
+
     global_calib_cond_.notify_all();
 
-    ContinueGlobalCalibrationResult result;
-    continue_global_calibration_as_.setSucceeded(result);
+    CompleteGlobalCalibrationResult result;
+    complete_global_calibration_as_.setSucceeded(result);
 }
 
 void Calibration::processGlobalCalibrationFeedback(
@@ -334,11 +339,12 @@ void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
 
     ROS_INFO("Local calibration started.");
 
+    ROS_INFO("local_calibration_object = %s", goal->calibration_object.c_str());
+    ROS_INFO("local_calibration_object_display = %s", goal->calibration_object_display.c_str());
+
     interactive_markers::InteractiveMarkerServer server("calibration_object_marker");
     InteractiveMarker local_calib_maker = makeObjectMarker(goal->calibration_object_display,
                                                            "local_calibration_marker");
-    server.insert(local_calib_maker,
-                  boost::bind(&Calibration::processLocalCalibrationFeedback, this, _1));
     if (local_pose_set_)
     {
         local_calib_maker.pose = current_local_marker_pose_;
@@ -349,6 +355,8 @@ void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
         current_local_marker_pose_ = local_calib_maker.pose;
         local_pose_set_ = true;
     }
+    server.insert(local_calib_maker,
+                  boost::bind(&Calibration::processLocalCalibrationFeedback, this, _1));
     server.applyChanges();
 
     LocalCalibrationResult result;
@@ -433,6 +441,7 @@ void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
         publishLocalStatus("Local calibration ready.", feedback);
 
         // wait to complete or abort
+        local_calibration_complete_ = false;
         while (!local_calib_cond_.timed_wait(lock, boost::posix_time::milliseconds(1000./30.))
                && !local_calibration_as_.isPreemptRequested())
         {
@@ -446,6 +455,9 @@ void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
                 tf::Transform vicon_ds_obj_transform;
                 vicon_ds_obj_transform = global_calibration_transform_
                                           * local_calibration_transform_
+                                          * vicon_obj_transform;
+
+                vicon_obj_transform = global_calibration_transform_
                                           * vicon_obj_transform;
 
                 geometry_msgs::Pose vicon_pose;
@@ -477,7 +489,7 @@ void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
             }
         }
 
-        if (local_calibration_as_.isPreemptRequested())
+        if (local_calibration_as_.isPreemptRequested() && !local_calibration_complete_)
         {
             publishLocalStatus("Local calibration Aborted.", feedback);
             local_calibration_as_.setAborted();
@@ -517,10 +529,12 @@ void Calibration::completeLocalCalibrationCB(const CompleteLocalCalibrationGoalC
 
     ROS_INFO("Completing local calibration ...");
 
+    local_calibration_complete_ = true;
+
     local_calib_cond_.notify_all();
 
-    ContinueLocalCalibrationResult result;
-    continue_local_calibration_as_.setSucceeded(result);
+    CompleteLocalCalibrationResult result;
+    complete_local_calibration_as_.setSucceeded(result);
 }
 
 void Calibration::processLocalCalibrationFeedback(const InteractiveMarkerFeedbackConstPtr& feedback)
@@ -694,12 +708,13 @@ void Calibration::tfTransformToMsgPose(const tf::Transform& transform, geometry_
     pose.orientation.z = q.getZ();
 }
 
-void Calibration::cachePose(const geometry_msgs::Pose& pose, const char* dest)
+void Calibration::cachePose(const geometry_msgs::Pose& pose, const std::string dest)
 {
     std::ofstream pose_tmp_file;
-    std::string cache_file = "/tmp/pose_cache_";
+    std::string cache_file = "/tmp/pose_cache_";    
     cache_file += dest;
-    pose_tmp_file.open (dest);
+    ROS_INFO("Caching pose %s", dest.c_str());
+    pose_tmp_file.open (cache_file.c_str());
     pose_tmp_file << pose.position.x  << " " << pose.position.y << " " << pose.position.z << " ";
     pose_tmp_file << pose.orientation.w << " "
                   << pose.orientation.x << " "
@@ -708,14 +723,16 @@ void Calibration::cachePose(const geometry_msgs::Pose& pose, const char* dest)
     pose_tmp_file.close();
 }
 
-void Calibration::loadPoseFromCache(const char* src, geometry_msgs::Pose& pose)
+void Calibration::loadPoseFromCache(const std::string src, geometry_msgs::Pose& pose)
 {
     std::ifstream pose_tmp_file;
     std::string cache_file = "/tmp/pose_cache_";
     cache_file += src;
-    pose_tmp_file.open (src);
+    pose_tmp_file.open (cache_file.c_str());
     if (pose_tmp_file.is_open())
     {
+        ROS_INFO("Loading pose %s from cache", cache_file.c_str());
+
         pose_tmp_file >> pose.position.x;
         pose_tmp_file >> pose.position.y;
         pose_tmp_file >> pose.position.z;

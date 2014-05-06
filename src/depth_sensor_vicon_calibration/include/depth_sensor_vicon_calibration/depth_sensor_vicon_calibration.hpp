@@ -46,29 +46,34 @@
 #ifndef DEPTH_SENSOR_VICON_CALIBRATION_DEPTH_SENSOR_VICON_CALIBRATION_HPP
 #define DEPTH_SENSOR_VICON_CALIBRATION_DEPTH_SENSOR_VICON_CALIBRATION_HPP
 
+// eigen
 #include <Eigen/Eigen>
 
+// boost
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/condition_variable.hpp>
 
+// ros
 #include <ros/ros.h>
 #include <geometry_msgs/Pose.h>
-#include <interactive_markers/interactive_marker_server.h>
-#include <actionlib/server/simple_action_server.h>
-
-#include <depth_sensor_vicon_calibration/GlobalCalibrationAction.h>
-#include <depth_sensor_vicon_calibration/ContinueGlobalCalibrationAction.h>
-#include <depth_sensor_vicon_calibration/CompleteGlobalCalibrationAction.h>
-
-#include <simple_object_tracker/spkf_object_tracker.hpp>
-
 #include <tf/LinearMath/Vector3.h>
 #include <tf/LinearMath/Quaternion.h>
 #include <tf/LinearMath/Scalar.h>
 #include <tf/LinearMath/Transform.h>
-#include <visualization_msgs/Marker.h>
-
 #include <tf/transform_broadcaster.h>
+#include <visualization_msgs/Marker.h>
+#include <interactive_markers/interactive_marker_server.h>
+#include <actionlib/server/simple_action_server.h>
+
+// actions
+#include <depth_sensor_vicon_calibration/GlobalCalibrationAction.h>
+#include <depth_sensor_vicon_calibration/ContinueGlobalCalibrationAction.h>
+#include <depth_sensor_vicon_calibration/CompleteGlobalCalibrationAction.h>
+#include <depth_sensor_vicon_calibration/LocalCalibrationAction.h>
+#include <depth_sensor_vicon_calibration/ContinueLocalCalibrationAction.h>
+#include <depth_sensor_vicon_calibration/CompleteLocalCalibrationAction.h>
+
+#include <simple_object_tracker/spkf_object_tracker.hpp>
 
 namespace depth_sensor_vicon_calibration
 {
@@ -83,13 +88,21 @@ namespace depth_sensor_vicon_calibration
                     std::string global_calibration_as_name,
                     std::string global_calibration_continue_as_name,
                     std::string global_complete_continue_as_name,
+                    std::string local_calibration_as_name,
+                    std::string local_calibration_continue_as_name,
+                    std::string local_complete_continue_as_name,
                     std::string vicon_object_pose_srv_name);
         ~Calibration();
 
         void globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal);
         void continueGlobalCalibrationCB(const ContinueGlobalCalibrationGoalConstPtr& goal);
         void completeGlobalCalibrationCB(const CompleteGlobalCalibrationGoalConstPtr& goal);
-        void processFeedback(const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
+        void processGlobalCalibrationFeedback(const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
+
+        void localCalibrationCB(const LocalCalibrationGoalConstPtr& goal);
+        void continueLocalCalibrationCB(const ContinueLocalCalibrationGoalConstPtr& goal);
+        void completeLocalCalibrationCB(const CompleteLocalCalibrationGoalConstPtr& goal);
+        void processLocalCalibrationFeedback(const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
 
     private:        
         void publishStatus(std::string status);
@@ -119,9 +132,16 @@ namespace depth_sensor_vicon_calibration
             continue_global_calibration_as_;
         actionlib::SimpleActionServer<CompleteGlobalCalibrationAction>
             complete_global_calibration_as_;
-        boost::condition_variable cond_;
-        boost::mutex mutex_;
-        geometry_msgs::Pose current_marker_pose_;
+
+        actionlib::SimpleActionServer<LocalCalibrationAction>
+            local_calibration_as_;
+        actionlib::SimpleActionServer<ContinueLocalCalibrationAction>
+            continue_local_calibration_as_;
+        actionlib::SimpleActionServer<CompleteLocalCalibrationAction>
+            complete_local_calibration_as_;
+
+        geometry_msgs::Pose current_global_marker_pose_;
+        geometry_msgs::Pose current_local_marker_pose_;
         GlobalCalibrationFeedback feedback_;
 
         ros::Publisher global_calib_publisher_;
@@ -129,6 +149,9 @@ namespace depth_sensor_vicon_calibration
 
         tf::TransformBroadcaster br_;
         tf::Transform transform_;
+
+        boost::condition_variable cond_;
+        boost::mutex mutex_;
     };
 }
 

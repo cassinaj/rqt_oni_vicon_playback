@@ -26,6 +26,9 @@ add_action_files(
   GlobalCalibration.action
   ContinueGlobalCalibration.action
   CompleteGlobalCalibration.action
+  LocalCalibration.action
+  ContinueLocalCalibration.action
+  CompleteLocalCalibration.action
 )
 
 generate_messages(
@@ -51,7 +54,7 @@ catkin_package(
 ## Your package locations should be listed before other locations
 include_directories(include ${catkin_INCLUDE_DIRS})
 
-set(headers include/depth_sensor_vicon_calibration/depth_sensor_vicon_calibration.hpp)
+set(headers include/${PROJECT_NAME}/depth_sensor_vicon_calibration.hpp)
 
 add_library(depth_sensor_vicon_calibration
    src/depth_sensor_vicon_calibration.cpp

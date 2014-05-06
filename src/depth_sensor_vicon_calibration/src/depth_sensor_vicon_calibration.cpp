@@ -64,7 +64,7 @@ Calibration::Calibration(ros::NodeHandle& node_handle,
                          std::string global_calibration_object_display,
                          std::string global_calibration_as_name,
                          std::string global_calibration_continue_as_name,
-                         std::string global_complete_continue_as_name,
+                         std::string global_complete_continue_as_name, std::string local_calibration_as_name, std::string local_calibration_continue_as_name, std::string local_complete_continue_as_name,
                          std::string vicon_object_pose_srv_name):
     node_handle_(node_handle),
     global_calibration_iterations_(global_calibration_iterations),
@@ -84,7 +84,19 @@ Calibration::Calibration(ros::NodeHandle& node_handle,
     complete_global_calibration_as_(node_handle,
                                     global_complete_continue_as_name,
                                     boost::bind(&Calibration::completeGlobalCalibrationCB, this,_1),
-                                    false)
+                                    false),
+    local_calibration_as_(node_handle,
+                         local_calibration_as_name,
+                         boost::bind(&Calibration::localCalibrationCB, this, _1),
+                         false),
+    continue_local_calibration_as_(node_handle,
+                                  local_calibration_continue_as_name,
+                                  boost::bind(&Calibration::continueLocalCalibrationCB, this,_1),
+                                  false),
+    complete_local_calibration_as_(node_handle,
+                                  local_complete_continue_as_name,
+                                  boost::bind(&Calibration::completeLocalCalibrationCB, this,_1),
+                                  false)
 {
     global_calib_publisher_ =
             node_handle_.advertise<visualization_msgs::Marker>("global_calibration_pose", 0);
@@ -108,7 +120,7 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
 
     interactive_markers::InteractiveMarkerServer server("calibration_object_marker");
     server.insert(makeObjectMarker(global_calibration_object_display_),
-                  boost::bind(&Calibration::processFeedback, this, _1));
+                  boost::bind(&Calibration::processGlobalCalibrationFeedback, this, _1));
     server.applyChanges();
 
     GlobalCalibrationResult result;    
@@ -357,7 +369,7 @@ void Calibration::completeGlobalCalibrationCB(const CompleteGlobalCalibrationGoa
     continue_global_calibration_as_.setSucceeded(result);
 }
 
-void Calibration::processFeedback(
+void Calibration::processGlobalCalibrationFeedback(
         const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback)
 {
     ROS_INFO("Current marker pose: [x,y,z] = [%f, %f, %f], q = [%f, %f, %f, %f]",
@@ -370,6 +382,18 @@ void Calibration::processFeedback(
              current_marker_pose_.orientation.z);
 
     current_marker_pose_ = feedback->pose;
+}
+
+void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
+{
+}
+
+void Calibration::continueLocalCalibrationCB(const ContinueLocalCalibrationGoalConstPtr& goal)
+{
+}
+
+void Calibration::completeLocalCalibrationCB(const CompleteLocalCalibrationGoalConstPtr& goal)
+{
 }
 
 void Calibration::publishStatus(std::string status)

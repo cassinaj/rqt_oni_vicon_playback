@@ -203,7 +203,6 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
 
     setActivity("depth-sensor-starting", false);
     setActivity("depth-sensor-running", false);
-    setActivity("chaning-mode", false);
     setActivity("changing-mode", false);
     setActivity("vicon-connecting", false);
     setActivity("vicon-connected", false);

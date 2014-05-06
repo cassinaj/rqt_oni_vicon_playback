@@ -107,6 +107,14 @@ namespace depth_sensor_vicon_calibration
         void processLocalCalibrationFeedback(
                 const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
 
+        void saveGlobalCalibration();
+        void loadGlobalCalibration();
+        void saveLocalCalibration();
+        void loadLocalCalibration();
+
+        void getGlobalCalibration();
+        void getLocalCalibration();
+
     private: /* Helper functions */
         void publishGlobalStatus(const std::string& status, GlobalCalibrationFeedback& feedback);
         void publishLocalStatus(const std::string& status, LocalCalibrationFeedback& feedback);

@@ -453,9 +453,9 @@ void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
                 msgPoseToTfTransform(vicon_object_pose.response.object_pose, vicon_obj_transform);
 
                 tf::Transform vicon_ds_obj_transform;
-                vicon_ds_obj_transform = local_calibration_transform_
-                                          * global_calibration_transform_
-                                          * vicon_obj_transform;
+                vicon_ds_obj_transform = global_calibration_transform_
+                                         * vicon_obj_transform
+                                         * local_calibration_transform_.inverse();
                 geometry_msgs::Pose vicon_pose;
                 tfTransformToMsgPose(vicon_ds_obj_transform, vicon_pose);
                 publishMarker(vicon_pose,

@@ -81,7 +81,7 @@ namespace depth_sensor_vicon_calibration
     {
     public:
         Calibration(ros::NodeHandle& node_handle,
-                    int global_calibration_iterations,
+                    int global_calibration_iterations, int local_calibration_iterations,
                     std::string global_calibration_object_name,
                     std::string global_calibration_object,
                     std::string global_calibration_object_display,
@@ -107,10 +107,13 @@ namespace depth_sensor_vicon_calibration
                 const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
 
     private: /* Helper functions */
-        void publishStatus(std::string status);
-        visualization_msgs::InteractiveMarker makeObjectMarker(std::string mesh_resource);
-        void publishMarker(const geometry_msgs::Pose& pose, std::string mesh_resource,
-                           const ros::Publisher &pub,
+        void publishGlobalStatus(const std::string& status, GlobalCalibrationFeedback& feedback);
+        void publishLocalStatus(const std::string& status, LocalCalibrationFeedback& feedback);
+        visualization_msgs::InteractiveMarker makeObjectMarker(const std::string& mesh_resource,
+                                                               const std::string& name);
+        void publishMarker(const geometry_msgs::Pose& pose,
+                           const std::string &mesh_resource,
+                           const ros::Publisher& pub,
                            int marker_id = 0,
                            float r = 0,
                            float g = 1,
@@ -132,13 +135,15 @@ namespace depth_sensor_vicon_calibration
         // parameters
         ros::NodeHandle node_handle_;
         int global_calibration_iterations_;
+        int local_calibration_iterations_;
         std::string global_calibration_object_name_;
         std::string global_calibration_object_;
         std::string global_calibration_object_display_;
         std::string vicon_object_pose_srv_name_;
 
         // implementation details
-        bool pose_set_;
+        bool global_pose_set_;
+        bool local_pose_set_;
         actionlib::SimpleActionServer<GlobalCalibrationAction>
             global_calibration_as_;
         actionlib::SimpleActionServer<ContinueGlobalCalibrationAction>
@@ -154,14 +159,18 @@ namespace depth_sensor_vicon_calibration
             complete_local_calibration_as_;
 
         geometry_msgs::Pose current_global_marker_pose_;
-        geometry_msgs::Pose current_local_marker_pose_;
-        GlobalCalibrationFeedback feedback_;
+        geometry_msgs::Pose current_local_marker_pose_;        
 
         ros::Publisher global_calib_publisher_;
+        ros::Publisher local_calib_publisher_;
+
         tf::Transform global_T_;
 
-        boost::condition_variable cond_;
-        boost::mutex mutex_;
+        boost::condition_variable global_calib_cond_;
+        boost::mutex global_calib_mutex_;
+
+        boost::condition_variable local_calib_cond_;
+        boost::mutex local_calib_mutex_;
 
         tf::TransformBroadcaster tf_broadcaster_;
         tf::TransformBroadcaster br_vicon_;

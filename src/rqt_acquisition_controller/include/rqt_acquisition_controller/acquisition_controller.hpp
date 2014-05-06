@@ -73,6 +73,10 @@
 #include <depth_sensor_vicon_calibration/ContinueGlobalCalibrationAction.h>
 #include <depth_sensor_vicon_calibration/CompleteGlobalCalibrationAction.h>
 
+#include <depth_sensor_vicon_calibration/LocalCalibrationAction.h>
+#include <depth_sensor_vicon_calibration/ContinueLocalCalibrationAction.h>
+#include <depth_sensor_vicon_calibration/CompleteLocalCalibrationAction.h>
+
 #include <ros_action_helper/action_helper.hpp>
 
 namespace rqt_acquisition_controller
@@ -96,6 +100,9 @@ namespace rqt_acquisition_controller
     ACTION_IMPLEMENT(depth_sensor_vicon_calibration, GlobalCalibration)
     ACTION_IMPLEMENT(depth_sensor_vicon_calibration, ContinueGlobalCalibration)
     ACTION_IMPLEMENT(depth_sensor_vicon_calibration, CompleteGlobalCalibration)
+    ACTION_IMPLEMENT(depth_sensor_vicon_calibration, LocalCalibration)
+    ACTION_IMPLEMENT(depth_sensor_vicon_calibration, ContinueLocalCalibration)
+    ACTION_IMPLEMENT(depth_sensor_vicon_calibration, CompleteLocalCalibration)
 
     public:
         struct StatusItem
@@ -146,10 +153,17 @@ namespace rqt_acquisition_controller
         void onGlobalCalibrationFeedback(int progress, int max_progress, QString status);
         void onCompleteGlobalCalibration();
 
+        void onStartLocalCalibration();
+        void onContinueLocalCalibration();
+        void onAbortLocalCalibration();
+        void onLocalCalibrationFeedback(int progress, int max_progress, QString status);
+        void onCompleteLocalCalibration();
+
     signals:
         void feedbackReceived(int vicon_frames, int kinect_frames, u_int64_t duration);
         void setStatusIcon(QString setting, QString url);
         void globalCalibrationFeedback(int progress, int max_progress, QString status);
+        void localCalibrationFeedback(int progress, int max_progress, QString status);
 
     private: /* implementation details */               
         bool box(QString message, bool rval = false, QMessageBox::Icon type = QMessageBox::Warning);

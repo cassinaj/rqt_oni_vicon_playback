@@ -80,7 +80,10 @@ AcquisitionController::AcquisitionController():
     ACTION(ConnectToVicon)(ACTION_NS_CONNECT_TO_VICON, true),
     ACTION(GlobalCalibration)(ACTION_NS_GLOBAL_CALIBRATION, true),
     ACTION(ContinueGlobalCalibration)(ACTION_NS_CONTINUE_GLOBAL_CALIBRATION, true),
-    ACTION(CompleteGlobalCalibration)(ACTION_NS_COMPLETE_GLOBAL_CALIBRATION, true)
+    ACTION(CompleteGlobalCalibration)(ACTION_NS_COMPLETE_GLOBAL_CALIBRATION, true),
+    ACTION(LocalCalibration)(ACTION_NS_LOCAL_CALIBRATION, true),
+    ACTION(ContinueLocalCalibration)(ACTION_NS_CONTINUE_LOCAL_CALIBRATION, true),
+    ACTION(CompleteLocalCalibration)(ACTION_NS_COMPLETE_LOCAL_CALIBRATION, true)
 {
     setObjectName("AcquisitionController");
 }
@@ -159,6 +162,11 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
     connect(ui_.continueGlobalCalibButton, SIGNAL(clicked()), this, SLOT(onContinueGlobalCalibration()));
     connect(ui_.completeGlobalCalibrationButton, SIGNAL(clicked()), this, SLOT(onCompleteGlobalCalibration()));
 
+    connect(ui_.startLocalCalibrationButton, SIGNAL(clicked()), this, SLOT(onStartLocalCalibration()));
+    connect(ui_.abortLocalCalibrationButton, SIGNAL(clicked()), this, SLOT(onAbortLocalCalibration()));
+    connect(ui_.continueLocalCalibButton, SIGNAL(clicked()), this, SLOT(onContinueLocalCalibration()));
+    connect(ui_.completeLocalCalibrationButton, SIGNAL(clicked()), this, SLOT(onCompleteLocalCalibration()));
+
     connect(timer_, SIGNAL(timeout()), this, SLOT(onUpdateStatus()));
     connect(ui_.sameModelCheckBox, SIGNAL(stateChanged(int)), this, SLOT(onSettingsChanged(int)));
     connect(ui_.viconObjectsComboBox,
@@ -182,6 +190,8 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
             this, SLOT(onSetStatusIcon(QString,QString)));
     connect(this, SIGNAL(globalCalibrationFeedback(int,int,QString)),
             this, SLOT(onGlobalCalibrationFeedback(int,int,QString)));
+    connect(this, SIGNAL(localCalibrationFeedback(int,int,QString)),
+            this, SLOT(onLocalCalibrationFeedback(int,int,QString)));
 
     setActivity("depth-sensor-starting", false);
     setActivity("depth-sensor-running", false);
@@ -219,6 +229,7 @@ void AcquisitionController::shutdownPlugin()
     ACTION_SHUTDOWN(RunDepthSensor, isActive("depth-sensor-running"));
     ACTION_SHUTDOWN(ConnectToVicon, isActive("vicon-connected"));
     ACTION_SHUTDOWN(GlobalCalibration, isActive("global-calibration-running"));
+    ACTION_SHUTDOWN(LocalCalibration, isActive("local-calibration-running"));
 }
 
 void AcquisitionController::saveSettings(qt_gui_cpp::Settings& plugin_settings,
@@ -313,6 +324,9 @@ void AcquisitionController::onStopAll()
 
     onAbortGlobalCalibration();
     if (isActive("global-calibration-running")) ACTION(GlobalCalibration).waitForResult(ros::Duration(0.5));
+
+    onAbortLocalCalibration();
+    if (isActive("local-calibration-running")) ACTION(LocalCalibration).waitForResult(ros::Duration(0.5));
 }
 
 void AcquisitionController::onSettingsChanged(QString change)
@@ -349,24 +363,13 @@ void AcquisitionController::onStartGlobalCalibration()
         setActivity("global-calibration-continued", false);
         setActivity("global-calibration-finished", true);
 
+        /*
         QString msg = "Adjust the calibration object marker in Rviz and continue calibration.\n\n";
         msg += "Make sure that '";
         msg += global_calib_object_vicon_name_.c_str();
         msg += "' object is defined in the Vicon Tracker!";
 
         box(msg, true, QMessageBox::Information);
-
-        /*
-        boost::filesystem::path object_path = object_model_dir_;
-
-        ACTION_GOAL(GlobalCalibration).object_name =
-                ui_.viconObjectsComboBox->currentText().toStdString();
-
-        ACTION_GOAL(GlobalCalibration).calibration_object_path =
-                "file://" + (object_path / object_model_tracking_file_).string();
-
-        ACTION_GOAL(GlobalCalibration).display_calibration_object_path =
-                "file://" + (object_path / object_model_display_file_).string();
         */
 
         ACTION_SEND_GOAL(AcquisitionController,
@@ -409,6 +412,70 @@ void AcquisitionController::onCompleteGlobalCalibration()
     ACTION_SEND_GOAL(AcquisitionController,
                      depth_sensor_vicon_calibration,
                      CompleteGlobalCalibration);
+}
+
+void AcquisitionController::onStartLocalCalibration()
+{
+    if (!isActive("local-calibration-running"))
+    {
+        setActivity("local-calibration-running", true);
+        setActivity("local-calibration-continued", false);
+        setActivity("local-calibration-finished", true);
+
+        /*
+        QString msg = "Adjust the calibration object marker in Rviz and continue calibration.\n\n";
+        msg += "Make sure that '";
+        msg += ui_.viconObjectsComboBox->currentText();
+        msg += "' object is defined in the Vicon Tracker!";
+
+        box(msg, true, QMessageBox::Information);
+        */
+
+        ACTION_GOAL(LocalCalibration).calibration_object_name
+                = ui_.viconObjectsComboBox->currentText().toStdString();
+        ACTION_GOAL(LocalCalibration).calibration_object = object_model_tracking_file_;
+        ACTION_GOAL(LocalCalibration).calibration_object_display = object_model_display_file_;
+
+        ACTION_SEND_GOAL(AcquisitionController,
+                         depth_sensor_vicon_calibration,
+                         LocalCalibration);
+    }
+}
+
+void AcquisitionController::onContinueLocalCalibration()
+{
+    if (!isActive("local-calibration-continued"))
+    {
+        setActivity("local-calibration-continued", true);
+        ACTION_SEND_GOAL(AcquisitionController,
+                         depth_sensor_vicon_calibration,
+                         ContinueLocalCalibration);
+    }
+}
+
+void AcquisitionController::onAbortLocalCalibration()
+{
+    ACTION(LocalCalibration).cancelAllGoals();
+    setActivity("local-calibration-running", false);
+    setActivity("local-calibration-continued", false);
+    setActivity("local-calibration-finished", false);
+    ROS_INFO("Aborting local calibration ...");
+}
+
+void AcquisitionController::onLocalCalibrationFeedback(int progress,
+                                                       int max_progress,
+                                                       QString status)
+{
+    ui_.localCalibProgressBar->setMaximum(max_progress);
+    ui_.localCalibProgressBar->setValue(progress);
+    ui_.localCalibProgressBar->setFormat(status + " %p%");
+}
+
+void AcquisitionController::onCompleteLocalCalibration()
+{
+    ACTION_SEND_GOAL(AcquisitionController,
+                     depth_sensor_vicon_calibration,
+                     CompleteLocalCalibration);
 }
 
 void AcquisitionController::onStartDepthSensor()

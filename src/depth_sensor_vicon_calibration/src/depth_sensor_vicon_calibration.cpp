@@ -435,7 +435,7 @@ void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
         tf::Transform T_o_d;
         msgPoseToTfTransform(vicon_object_pose.response.object_pose, T_o_v);
         msgPoseToTfTransform(object_tracker.getCurrentPose(), T_o_d);
-        local_calibration_transform_ = T_o_d * global_calibration_transform_ * T_o_v;
+        local_calibration_transform_ = T_o_d.inverse() * global_calibration_transform_ * T_o_v;
 
         feedback.finished = true;
         publishLocalStatus("Local calibration ready.", feedback);
@@ -455,7 +455,7 @@ void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
                 tf::Transform vicon_ds_obj_transform;
                 vicon_ds_obj_transform = global_calibration_transform_
                                           * local_calibration_transform_
-                                          * vicon_obj_transform;
+                                          * vicon_obj_transform.inverse();
 
                 vicon_obj_transform = global_calibration_transform_
                                           * vicon_obj_transform;

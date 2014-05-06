@@ -453,19 +453,26 @@ void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
                 msgPoseToTfTransform(vicon_object_pose.response.object_pose, vicon_obj_transform);
 
                 tf::Transform vicon_ds_obj_transform;
-                vicon_ds_obj_transform = global_calibration_transform_
-                                          * local_calibration_transform_
-                                          * vicon_obj_transform.inverse();
-
-                vicon_obj_transform = global_calibration_transform_
+                vicon_ds_obj_transform = local_calibration_transform_
+                                          * global_calibration_transform_
                                           * vicon_obj_transform;
-
                 geometry_msgs::Pose vicon_pose;
                 tfTransformToMsgPose(vicon_ds_obj_transform, vicon_pose);
                 publishMarker(vicon_pose,
                               goal->calibration_object_display,
                               local_calib_publisher_,
                               0, 1, 0);
+                tf_broadcaster_.sendTransform(tf::StampedTransform(vicon_ds_obj_transform,
+                                                                   ros::Time::now(),
+                                                                   "XTION_RGB",
+                                                                   "vicon_ds_object_frame"));
+
+                vicon_obj_transform = global_calibration_transform_
+                                          * vicon_obj_transform;
+                tf_broadcaster_.sendTransform(tf::StampedTransform(vicon_obj_transform,
+                                                                   ros::Time::now(),
+                                                                   "XTION_RGB",
+                                                                   "vicon_object_frame"));
 
                 // set coordinates
                 tf::Transform transform_ds_obj;
@@ -474,14 +481,7 @@ void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
                                                                    ros::Time::now(),
                                                                    "XTION_RGB",
                                                                    "ds_object_frame"));
-                tf_broadcaster_.sendTransform(tf::StampedTransform(vicon_obj_transform,
-                                                                   ros::Time::now(),
-                                                                   "XTION_RGB",
-                                                                   "vicon_object_frame"));
-                tf_broadcaster_.sendTransform(tf::StampedTransform(vicon_ds_obj_transform,
-                                                                   ros::Time::now(),
-                                                                   "XTION_RGB",
-                                                                   "vicon_ds_object_frame"));
+
                 tf_broadcaster_.sendTransform(tf::StampedTransform(global_calibration_transform_,
                                                                    ros::Time::now(),
                                                                    "XTION_RGB",

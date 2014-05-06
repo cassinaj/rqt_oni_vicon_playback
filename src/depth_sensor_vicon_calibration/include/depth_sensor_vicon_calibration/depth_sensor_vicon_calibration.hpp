@@ -81,7 +81,8 @@ namespace depth_sensor_vicon_calibration
     {
     public:
         Calibration(ros::NodeHandle& node_handle,
-                    int global_calibration_iterations, int local_calibration_iterations,
+                    int global_calibration_iterations,
+                    int local_calibration_iterations,
                     std::string global_calibration_object_name,
                     std::string global_calibration_object,
                     std::string global_calibration_object_display,
@@ -164,7 +165,8 @@ namespace depth_sensor_vicon_calibration
         ros::Publisher global_calib_publisher_;
         ros::Publisher local_calib_publisher_;
 
-        tf::Transform global_T_;
+        tf::Transform global_calibration_transform_;
+        tf::Transform local_calibration_transform_;
 
         boost::condition_variable global_calib_cond_;
         boost::mutex global_calib_mutex_;

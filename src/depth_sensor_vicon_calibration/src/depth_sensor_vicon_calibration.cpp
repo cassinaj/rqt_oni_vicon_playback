@@ -110,7 +110,7 @@ Calibration::Calibration(ros::NodeHandle& node_handle,
     local_calib_publisher_ =
             node_handle_.advertise<visualization_msgs::Marker>("local_calibration_pose", 0);
 
-    global_T_.setIdentity();
+    global_calibration_transform_.setIdentity();
 
     global_calibration_as_.start();
     continue_global_calibration_as_.start();
@@ -124,6 +124,10 @@ Calibration::Calibration(ros::NodeHandle& node_handle,
 Calibration::~Calibration()
 {
 }
+
+// ============================================================================================== //
+// == Global Calibration ======================================================================== //
+// ============================================================================================== //
 
 void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
 {
@@ -224,10 +228,10 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
         tf::Transform T_o_v;
         tf::Transform T_o_d;
         msgPoseToTfTransform(vicon_object_pose.response.object_pose, T_o_v);
-        msgPoseToTfTransform(object_tracker.getCurrentPose(), T_o_v);
-        global_T_.mult(T_o_d, T_o_v.inverse());
+        msgPoseToTfTransform(object_tracker.getCurrentPose(), T_o_d);
+        global_calibration_transform_ = T_o_d * T_o_v.inverse();
 
-        feedback.finished = false;
+        feedback.finished = true;
         publishGlobalStatus("Global calibration ready.", feedback);
 
         // wait to complete or abort
@@ -240,7 +244,7 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
                 // vicon pose to depth sensor pose and publish marker
                 tf::Transform transform_vicon_obj;
                 msgPoseToTfTransform(vicon_object_pose.response.object_pose, transform_vicon_obj);
-                transform_vicon_obj = global_T_ * transform_vicon_obj;
+                transform_vicon_obj = global_calibration_transform_ * transform_vicon_obj;
 
                 geometry_msgs::Pose vicon_pose;
                 tfTransformToMsgPose(transform_vicon_obj, vicon_pose);
@@ -260,7 +264,7 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
                                                                    ros::Time::now(),
                                                                    "XTION_RGB",
                                                                    "vicon_object_frame"));
-                tf_broadcaster_.sendTransform(tf::StampedTransform(global_T_,
+                tf_broadcaster_.sendTransform(tf::StampedTransform(global_calibration_transform_,
                                                                    ros::Time::now(),
                                                                    "XTION_RGB",
                                                                    "vicon_wcs"));
@@ -318,6 +322,10 @@ void Calibration::processGlobalCalibrationFeedback(
 {
     current_global_marker_pose_ = feedback->pose;
 }
+
+// ============================================================================================== //
+// == Local Calibration ========================================================================= //
+// ============================================================================================== //
 
 void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
 {
@@ -418,10 +426,10 @@ void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
         tf::Transform T_o_v;
         tf::Transform T_o_d;
         msgPoseToTfTransform(vicon_object_pose.response.object_pose, T_o_v);
-        msgPoseToTfTransform(object_tracker.getCurrentPose(), T_o_v);
-        global_T_.mult(T_o_d, T_o_v.inverse());
+        msgPoseToTfTransform(object_tracker.getCurrentPose(), T_o_d);
+        local_calibration_transform_ = T_o_d.inverse() * global_calibration_transform_ * T_o_v;
 
-        feedback.finished = false;
+        feedback.finished = true;
         publishLocalStatus("Local calibration ready.", feedback);
 
         // wait to complete or abort
@@ -432,12 +440,16 @@ void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
             if (ros::service::call(vicon_object_pose_srv_name_, vicon_object_pose))
             {
                 // vicon pose to depth sensor pose and publish marker
-                tf::Transform transform_vicon_obj;
-                msgPoseToTfTransform(vicon_object_pose.response.object_pose, transform_vicon_obj);
-                transform_vicon_obj = global_T_ * transform_vicon_obj;
+                tf::Transform vicon_obj_transform;
+                msgPoseToTfTransform(vicon_object_pose.response.object_pose, vicon_obj_transform);
+
+                tf::Transform vicon_ds_obj_transform;
+                vicon_ds_obj_transform = global_calibration_transform_
+                                          * local_calibration_transform_
+                                          * vicon_obj_transform;
 
                 geometry_msgs::Pose vicon_pose;
-                tfTransformToMsgPose(transform_vicon_obj, vicon_pose);
+                tfTransformToMsgPose(vicon_ds_obj_transform, vicon_pose);
                 publishMarker(vicon_pose,
                               goal->calibration_object_display,
                               local_calib_publisher_,
@@ -450,11 +462,15 @@ void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
                                                                    ros::Time::now(),
                                                                    "XTION_RGB",
                                                                    "ds_object_frame"));
-                tf_broadcaster_.sendTransform(tf::StampedTransform(transform_vicon_obj,
+                tf_broadcaster_.sendTransform(tf::StampedTransform(vicon_obj_transform,
                                                                    ros::Time::now(),
                                                                    "XTION_RGB",
                                                                    "vicon_object_frame"));
-                tf_broadcaster_.sendTransform(tf::StampedTransform(global_T_,
+                tf_broadcaster_.sendTransform(tf::StampedTransform(vicon_ds_obj_transform,
+                                                                   ros::Time::now(),
+                                                                   "XTION_RGB",
+                                                                   "vicon_ds_object_frame"));
+                tf_broadcaster_.sendTransform(tf::StampedTransform(global_calibration_transform_,
                                                                    ros::Time::now(),
                                                                    "XTION_RGB",
                                                                    "vicon_wcs"));

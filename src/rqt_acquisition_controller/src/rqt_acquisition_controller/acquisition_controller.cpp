@@ -317,7 +317,7 @@ void AcquisitionController::onStartRecording()
         ROS_ERROR("Saving global calibration %s failed.",
                   save_gobal_calibration.request.destination.c_str());
 
-        box("Saving global calibration failed.", false, QMessageBox::Critical);
+        box("Saving global calibration f.ailed.", false, QMessageBox::Critical);
         return;
     }
 
@@ -612,7 +612,7 @@ void AcquisitionController::onLoadLocalCalibration()
     {
         LoadLocalCalibration load_local_calibration;
         load_local_calibration.request.source = dir.toStdString();
-        if (ros::service::call(SaveLocalCalibration::Request::SERVICE_NAME,
+        if (ros::service::call(LoadLocalCalibration::Request::SERVICE_NAME,
                                load_local_calibration))
         {
             setActivity("locally-calibrated", true);

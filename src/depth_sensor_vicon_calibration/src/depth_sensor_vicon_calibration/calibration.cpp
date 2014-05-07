@@ -240,6 +240,9 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
         ros::spinOnce();
     }
 
+    feedback.progress = feedback.max_progress;
+    publishGlobalStatus("Ready ", feedback);
+
     ViconObjectPose vicon_object_pose;
     vicon_object_pose.request.object_name = global_calibration_object_name_;
     if (ros::service::call(ViconObjectPose::Request::SERVICE_NAME, vicon_object_pose))

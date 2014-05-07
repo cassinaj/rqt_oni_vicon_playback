@@ -143,8 +143,8 @@ bool Transform::saveTransform(const std::string &destination, const tf::Transfor
     std::ofstream transform_file;
     transform_file.open(destination.c_str());
     transform_file << transform.getOrigin().getX()  << " "
-                     << transform.getOrigin().getX()  << " "
-                     << transform.getOrigin().getX()  << " "
+                     << transform.getOrigin().getY()  << " "
+                     << transform.getOrigin().getZ()  << " "
                      << orientation.getW()  << " "
                      << orientation.getX()  << " "
                      << orientation.getY()  << " "

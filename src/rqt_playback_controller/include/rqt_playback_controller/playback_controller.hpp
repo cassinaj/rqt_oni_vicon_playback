@@ -40,7 +40,8 @@
 /**
  * @date 05/04/2014
  * @author Jan Issac (jan.issac@gmail.com)
- * Karlsruhe Institute of Technology (KIT), University of Southern California (USC)
+ * Max-Planck-Institute for Intelligent Systems, University of Southern California (USC),
+ *   Karlsruhe Institute of Technology (KIT)
  */
 
 #ifndef RQT_PLAYBACK_CONTROLLER_PLUGIN_HPP

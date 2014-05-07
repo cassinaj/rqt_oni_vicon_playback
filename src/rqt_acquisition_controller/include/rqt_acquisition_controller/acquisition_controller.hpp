@@ -40,7 +40,8 @@
 /**
  * @date 04/17/2014
  * @author Jan Issac (jan.issac@gmail.com)
- * Karlsruhe Institute of Technology (KIT), University of Southern California (USC)
+ * Max-Planck-Institute for Intelligent Systems, University of Southern California (USC),
+ *   Karlsruhe Institute of Technology (KIT)
  */
 
 #ifndef RQT_ACQUISITION_CONTROLLER_PLUGIN_HPP
@@ -93,16 +94,16 @@ namespace rqt_acquisition_controller
      *
      * This issue has been fixed in Hydro.
      */
-    ACTION_IMPLEMENT(oni_vicon_recorder, Record)
-    ACTION_IMPLEMENT(oni_vicon_recorder, RunDepthSensor)
-    ACTION_IMPLEMENT(oni_vicon_recorder, ConnectToVicon)
-    ACTION_IMPLEMENT(oni_vicon_recorder, ChangeDepthSensorMode)
-    ACTION_IMPLEMENT(depth_sensor_vicon_calibration, GlobalCalibration)
-    ACTION_IMPLEMENT(depth_sensor_vicon_calibration, ContinueGlobalCalibration)
-    ACTION_IMPLEMENT(depth_sensor_vicon_calibration, CompleteGlobalCalibration)
-    ACTION_IMPLEMENT(depth_sensor_vicon_calibration, LocalCalibration)
-    ACTION_IMPLEMENT(depth_sensor_vicon_calibration, ContinueLocalCalibration)
-    ACTION_IMPLEMENT(depth_sensor_vicon_calibration, CompleteLocalCalibration)
+    ACTION_IMPLEMENT_CLIENT(oni_vicon_recorder, Record)
+    ACTION_IMPLEMENT_CLIENT(oni_vicon_recorder, RunDepthSensor)
+    ACTION_IMPLEMENT_CLIENT(oni_vicon_recorder, ConnectToVicon)
+    ACTION_IMPLEMENT_CLIENT(oni_vicon_recorder, ChangeDepthSensorMode)
+    ACTION_IMPLEMENT_CLIENT(depth_sensor_vicon_calibration, GlobalCalibration)
+    ACTION_IMPLEMENT_CLIENT(depth_sensor_vicon_calibration, ContinueGlobalCalibration)
+    ACTION_IMPLEMENT_CLIENT(depth_sensor_vicon_calibration, CompleteGlobalCalibration)
+    ACTION_IMPLEMENT_CLIENT(depth_sensor_vicon_calibration, LocalCalibration)
+    ACTION_IMPLEMENT_CLIENT(depth_sensor_vicon_calibration, ContinueLocalCalibration)
+    ACTION_IMPLEMENT_CLIENT(depth_sensor_vicon_calibration, CompleteLocalCalibration)
 
     public:
         struct StatusItem
@@ -212,7 +213,7 @@ namespace rqt_acquisition_controller
         std::string global_calib_object_vicon_name_;
         std::string object_model_package_;
         std::string object_model_display_file_;
-        std::string object_model_tracking_file_;
+        std::string object_model_tracking_file_;       
     };
 }
 

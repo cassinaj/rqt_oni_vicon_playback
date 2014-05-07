@@ -40,7 +40,8 @@
 /**
  * @date 04/26/2014
  * @author Jan Issac (jan.issac@gmail.com)
- * Karlsruhe Institute of Technology (KIT), University of Southern California (USC)
+ * Max-Planck-Institute for Intelligent Systems, University of Southern California (USC),
+ *   Karlsruhe Institute of Technology (KIT)
  */
 
 #ifndef DEPTH_SENSOR_VICON_CALIBRATION_DEPTH_SENSOR_VICON_CALIBRATION_HPP
@@ -85,14 +86,7 @@ namespace depth_sensor_vicon_calibration
                     int local_calibration_iterations,
                     std::string global_calibration_object_name,
                     std::string global_calibration_object,
-                    std::string global_calibration_object_display,
-                    std::string global_calibration_as_name,
-                    std::string global_calibration_continue_as_name,
-                    std::string global_complete_continue_as_name,
-                    std::string local_calibration_as_name,
-                    std::string local_calibration_continue_as_name,
-                    std::string local_complete_continue_as_name,
-                    std::string vicon_object_pose_srv_name);
+                    std::string global_calibration_object_display);
         ~Calibration();
 
         void globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal);
@@ -148,7 +142,6 @@ namespace depth_sensor_vicon_calibration
         std::string global_calibration_object_name_;
         std::string global_calibration_object_;
         std::string global_calibration_object_display_;
-        std::string vicon_object_pose_srv_name_;
 
         // implementation details
         bool global_pose_set_;
@@ -185,12 +178,11 @@ namespace depth_sensor_vicon_calibration
         boost::mutex local_calib_mutex_;
 
         tf::TransformBroadcaster tf_broadcaster_;
-        tf::TransformBroadcaster br_vicon_;
-        tf::TransformBroadcaster br_ds_obj_;
-        tf::TransformBroadcaster br_vicon_obj_;
-        tf::Transform transform_vicon_;
-        tf::Transform transform_ds_obj_;
-        tf::Transform transform_vicon_obj_;
+
+        ros::ServiceServer save_global_calib_srv_;
+        ros::ServiceServer save_local_calib_srv_;
+        ros::ServiceServer load_global_calib_srv_;
+        ros::ServiceServer load_local_calib_srv_;
     };
 }
 

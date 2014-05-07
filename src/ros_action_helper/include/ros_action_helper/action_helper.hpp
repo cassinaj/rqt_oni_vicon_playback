@@ -84,7 +84,7 @@
 #define ACTION(action_name) action_name##_ac_
 #define ACTION_GOAL(action_name) action_name##_goal_
 
-#define ACTION_IMPLEMENT(action_namespace, action_name) \
+#define ACTION_IMPLEMENT_CLIENT(action_namespace, action_name) \
     public: \
         typedef  actionlib::SimpleActionClient<action_namespace::action_name##Action> \
             action_name##Client;\
@@ -95,6 +95,9 @@
         void action_name ## FeedbackCB(action_namespace::action_name##FeedbackConstPtr feedback);\
         action_name##Client action_name##_ac_;\
         action_namespace::action_name##Goal action_name##_goal_;
+
+#define ACTION_INIT(action_namespace, action_name)\
+    action_name##_ac_(action_namespace::action_name##Goal::ACTION_NAME, true)
 
 #define ACTION_ON_ACTIVE(current_class_name, action_namespace, action_name)\
     void current_class_name::action_name ## ActiveCB()

@@ -21,29 +21,38 @@ include_directories(${Eigen_INCLUDE_DIRS})
 ## Declare ROS messages, services and actions ##
 ################################################
 add_action_files(
-  DIRECTORY action
-  FILES
-  GlobalCalibration.action
-  ContinueGlobalCalibration.action
-  CompleteGlobalCalibration.action
-  LocalCalibration.action
-  ContinueLocalCalibration.action
-  CompleteLocalCalibration.action
+    DIRECTORY action
+    FILES
+    GlobalCalibration.action
+    ContinueGlobalCalibration.action
+    CompleteGlobalCalibration.action
+    LocalCalibration.action
+    ContinueLocalCalibration.action
+    CompleteLocalCalibration.action
+)
+
+add_service_files(
+    DIRECTORY srv
+    FILES
+    LoadGobalCalibration.srv
+    LoadLocalCalibration.srv
+    SaveGobalCalibration.srv
+    SaveLocalCalibration.srv
 )
 
 generate_messages(
-  DEPENDENCIES
-  std_msgs actionlib_msgs std_msgs visualization_msgs geometry_msgs
+    DEPENDENCIES
+    std_msgs actionlib_msgs std_msgs visualization_msgs geometry_msgs
 )
 
 ###################################
 ## catkin specific configuration ##
 ###################################
 catkin_package(
-  INCLUDE_DIRS include
-  LIBRARIES depth_sensor_vicon_calibration
-  CATKIN_DEPENDS actionlib_msgs actionlib interactive_markers simple_object_tracker tf
-  DEPENDS eigen
+    INCLUDE_DIRS include
+    LIBRARIES depth_sensor_vicon_calibration
+    CATKIN_DEPENDS actionlib_msgs actionlib interactive_markers simple_object_tracker tf
+    DEPENDS eigen
 )
 
 ###########

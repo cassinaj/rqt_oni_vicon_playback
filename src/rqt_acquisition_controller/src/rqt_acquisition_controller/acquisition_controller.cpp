@@ -40,7 +40,8 @@
 /**
  * @date 04/17/2014
  * @author Jan Issac (jan.issac@gmail.com)
- * Karlsruhe Institute of Technology (KIT), University of Southern California (USC)
+ * Max-Planck-Institute for Intelligent Systems, University of Southern California (USC),
+ *   Karlsruhe Institute of Technology (KIT)
  */
 
 #include "rqt_acquisition_controller/acquisition_controller.hpp"
@@ -74,16 +75,16 @@ using namespace rqt_acquisition_controller;
 AcquisitionController::AcquisitionController():
     rqt_gui_cpp::Plugin(),
     widget_(0),
-    ACTION(Record)(ACTION_NS_RECORD, true),
-    ACTION(RunDepthSensor)(ACTION_NS_RUN_DEPTH_SENSOR, true),
-    ACTION(ChangeDepthSensorMode)(ACTION_NS_CHANGE_DEPTH_SENSOR_MODE, true),
-    ACTION(ConnectToVicon)(ACTION_NS_CONNECT_TO_VICON, true),
-    ACTION(GlobalCalibration)(ACTION_NS_GLOBAL_CALIBRATION, true),
-    ACTION(ContinueGlobalCalibration)(ACTION_NS_CONTINUE_GLOBAL_CALIBRATION, true),
-    ACTION(CompleteGlobalCalibration)(ACTION_NS_COMPLETE_GLOBAL_CALIBRATION, true),
-    ACTION(LocalCalibration)(ACTION_NS_LOCAL_CALIBRATION, true),
-    ACTION(ContinueLocalCalibration)(ACTION_NS_CONTINUE_LOCAL_CALIBRATION, true),
-    ACTION(CompleteLocalCalibration)(ACTION_NS_COMPLETE_LOCAL_CALIBRATION, true)
+    ACTION_INIT(oni_vicon_recorder, Record),
+    ACTION_INIT(oni_vicon_recorder, RunDepthSensor),
+    ACTION_INIT(oni_vicon_recorder, ChangeDepthSensorMode),
+    ACTION_INIT(oni_vicon_recorder, ConnectToVicon),
+    ACTION_INIT(depth_sensor_vicon_calibration, GlobalCalibration),
+    ACTION_INIT(depth_sensor_vicon_calibration, ContinueGlobalCalibration),
+    ACTION_INIT(depth_sensor_vicon_calibration, CompleteGlobalCalibration),
+    ACTION_INIT(depth_sensor_vicon_calibration, LocalCalibration),
+    ACTION_INIT(depth_sensor_vicon_calibration, ContinueLocalCalibration),
+    ACTION_INIT(depth_sensor_vicon_calibration, CompleteLocalCalibration)
 {
     setObjectName("AcquisitionController");
 }
@@ -598,7 +599,7 @@ void AcquisitionController::onGenerateRecordName()
 void AcquisitionController::onDetectViconObjects()
 {
     oni_vicon_recorder::ViconObjects vicon_objects;
-    if (ros::service::call(SERVICE_NS_VICON_OBJECTS, vicon_objects))
+    if (ros::service::call(oni_vicon_recorder::ViconObjects::Request::SERVICE_NAME, vicon_objects))
     {
         ui_.viconObjectsComboBox->clear();
         ui_.viconObjectsComboBox->addItem("");
@@ -1190,7 +1191,8 @@ bool AcquisitionController::validateObjectName(const QString& style_error)
         ui_.objectNameLabel->setStyleSheet(style_error);
         return box("Please specify or select an existing object name in the Vicon scene!");
     }
-    else if (ros::service::call(SERVICE_NS_VERIFY_OBJECT_EXISTS, verify_object))
+    else if (ros::service::call(oni_vicon_recorder::VerifyObjectExists::Request::SERVICE_NAME,
+                                verify_object))
     {
         if (!verify_object.response.exists)
         {

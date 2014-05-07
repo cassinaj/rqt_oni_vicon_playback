@@ -40,7 +40,8 @@
 /**
  * @date 04/26/2014
  * @author Jan Issac (jan.issac@gmail.com)
- * Karlsruhe Institute of Technology (KIT), University of Southern California (USC)
+ * Max-Planck-Institute for Intelligent Systems, University of Southern California (USC),
+ *   Karlsruhe Institute of Technology (KIT)
  */
 
 #include "depth_sensor_vicon_calibration/depth_sensor_vicon_calibration.hpp"
@@ -53,54 +54,48 @@
 
 #include <oni_vicon_recorder/ViconObjectPose.h>
 
+
 using namespace depth_sensor_vicon_calibration;
 using namespace visualization_msgs;
 using namespace simple_object_tracker;
+using namespace oni_vicon_recorder;
 
 Calibration::Calibration(ros::NodeHandle& node_handle,
                          int global_calibration_iterations,
                          int local_calibration_iterations,
                          std::string global_calibration_object_name,
                          std::string global_calibration_object,
-                         std::string global_calibration_object_display,
-                         std::string global_calibration_as_name,
-                         std::string global_calibration_continue_as_name,
-                         std::string global_complete_continue_as_name,
-                         std::string local_calibration_as_name,
-                         std::string local_calibration_continue_as_name,
-                         std::string local_complete_continue_as_name,
-                         std::string vicon_object_pose_srv_name):
+                         std::string global_calibration_object_display):
     node_handle_(node_handle),
     global_calibration_iterations_(global_calibration_iterations),
     local_calibration_iterations_(local_calibration_iterations),
     global_calibration_object_name_(global_calibration_object_name),
     global_calibration_object_(global_calibration_object),
     global_calibration_object_display_(global_calibration_object_display),
-    vicon_object_pose_srv_name_(vicon_object_pose_srv_name),
     global_pose_set_(false),
     local_pose_set_(false),
     global_calibration_as_(node_handle,
-                           global_calibration_as_name,
+                           GlobalCalibrationGoal::ACTION_NAME,
                            boost::bind(&Calibration::globalCalibrationCB, this, _1),
                            false),
     continue_global_calibration_as_(node_handle,
-                                    global_calibration_continue_as_name,
+                                    ContinueGlobalCalibrationGoal::ACTION_NAME,
                                     boost::bind(&Calibration::continueGlobalCalibrationCB, this,_1),
                                     false),
     complete_global_calibration_as_(node_handle,
-                                    global_complete_continue_as_name,
+                                    CompleteLocalCalibrationGoal::ACTION_NAME,
                                     boost::bind(&Calibration::completeGlobalCalibrationCB, this,_1),
                                     false),
     local_calibration_as_(node_handle,
-                         local_calibration_as_name,
+                         LocalCalibrationGoal::ACTION_NAME,
                          boost::bind(&Calibration::localCalibrationCB, this, _1),
                          false),
     continue_local_calibration_as_(node_handle,
-                                  local_calibration_continue_as_name,
+                                  ContinueLocalCalibrationGoal::ACTION_NAME,
                                   boost::bind(&Calibration::continueLocalCalibrationCB, this,_1),
                                   false),
     complete_local_calibration_as_(node_handle,
-                                  local_complete_continue_as_name,
+                                  CompleteLocalCalibrationGoal::ACTION_NAME,
                                   boost::bind(&Calibration::completeLocalCalibrationCB, this,_1),
                                   false),
     global_calibration_complete_(false),
@@ -121,6 +116,12 @@ Calibration::Calibration(ros::NodeHandle& node_handle,
     local_calibration_as_.start();
     continue_local_calibration_as_.start();
     complete_local_calibration_as_.start();
+
+    /*
+    save_global_calib_srv_ = node_handle.advertiseService(vicon_objects_srv_name,
+                                                          &ViconRecorder::viconObjectsCB,
+                                                          this);
+                                                          */
 }
 
 Calibration::~Calibration()
@@ -222,9 +223,9 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
         ros::spinOnce();
     }
 
-    oni_vicon_recorder::ViconObjectPose vicon_object_pose;
+    ViconObjectPose vicon_object_pose;
     vicon_object_pose.request.object_name = global_calibration_object_name_;
-    if (ros::service::call(vicon_object_pose_srv_name_, vicon_object_pose))
+    if (ros::service::call(ViconObjectPose::Request::SERVICE_NAME, vicon_object_pose))
     {
         // calculate global transformation matrix
         tf::Transform T_o_v;
@@ -242,7 +243,7 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
                && !global_calibration_as_.isPreemptRequested())
         {
             // while waiting to complete publish calibrated pose
-            if (ros::service::call(vicon_object_pose_srv_name_, vicon_object_pose))
+            if (ros::service::call(ViconObjectPose::Request::SERVICE_NAME, vicon_object_pose))
             {
                 // vicon pose to depth sensor pose and publish marker
                 tf::Transform vicon_obj_transform;
@@ -425,9 +426,9 @@ void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
         ros::spinOnce();
     }
 
-    oni_vicon_recorder::ViconObjectPose vicon_object_pose;
+    ViconObjectPose vicon_object_pose;
     vicon_object_pose.request.object_name = goal->calibration_object_name;
-    if (ros::service::call(vicon_object_pose_srv_name_, vicon_object_pose))
+    if (ros::service::call(ViconObjectPose::Request::SERVICE_NAME, vicon_object_pose))
     {
         // calculate local transformation
 
@@ -446,7 +447,7 @@ void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
                && !local_calibration_as_.isPreemptRequested())
         {
             // while waiting to complete publish calibrated pose
-            if (ros::service::call(vicon_object_pose_srv_name_, vicon_object_pose))
+            if (ros::service::call(ViconObjectPose::Request::SERVICE_NAME, vicon_object_pose))
             {
                 // vicon pose to depth sensor pose and publish marker
                 tf::Transform vicon_obj_transform;

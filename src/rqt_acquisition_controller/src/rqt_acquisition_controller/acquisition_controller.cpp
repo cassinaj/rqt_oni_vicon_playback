@@ -67,9 +67,14 @@
 
 #include <rviz/load_resource.h>
 
+#include <depth_sensor_vicon_calibration/SaveGlobalCalibration.h>
+#include <depth_sensor_vicon_calibration/SaveLocalCalibration.h>
+#include <depth_sensor_vicon_calibration/LoadGlobalCalibration.h>
+#include <depth_sensor_vicon_calibration/LoadLocalCalibration.h>
+
 using namespace rviz;
 using namespace rqt_acquisition_controller;
-namespace calibration = depth_sensor_vicon_calibration;
+using namespace depth_sensor_vicon_calibration;
 
 AcquisitionController::AcquisitionController():
     rqt_gui_cpp::Plugin(),
@@ -174,6 +179,11 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
             this, SLOT(onContinueLocalCalibration()));
     connect(ui_.completeLocalCalibrationButton, SIGNAL(clicked()),
             this, SLOT(onCompleteLocalCalibration()));
+
+    connect(ui_.saveGlobalCalibButton, SIGNAL(clicked()), this, SLOT(onSaveGlobalCalibration()));
+    connect(ui_.saveLocalCalibButton, SIGNAL(clicked()), this, SLOT(onSaveLocalCalibration()));
+    connect(ui_.loadGlobalCalibButton, SIGNAL(clicked()), this, SLOT(onLoadGlobalCalibration()));
+    connect(ui_.loadLocalCalibButton, SIGNAL(clicked()), this, SLOT(onLoadLocalCalibration()));
 
     connect(timer_, SIGNAL(timeout()), this, SLOT(onUpdateStatus()));
     connect(ui_.sameModelCheckBox, SIGNAL(stateChanged(int)), this, SLOT(onSettingsChanged(int)));
@@ -298,6 +308,32 @@ void AcquisitionController::onStartRecording()
         return;
     }
 
+    SaveGlobalCalibration save_gobal_calibration;
+    save_gobal_calibration.request.destination =
+            recording_destination_dir_ + "/global_calibration.txt";
+    if (ros::service::call(SaveGlobalCalibration::Request::SERVICE_NAME,
+                           save_gobal_calibration))
+    {
+        ROS_ERROR("Saving global calibration %s failed.",
+                  save_gobal_calibration.request.destination.c_str());
+
+        box("Saving global calibration failed.", false, QMessageBox::Critical);
+        return;
+    }
+
+    SaveLocalCalibration save_local_calibration;
+    save_local_calibration.request.destination =
+            recording_destination_dir_ + "/local_calibration.txt";
+    if (!ros::service::call(SaveLocalCalibration::Request::SERVICE_NAME,
+                           save_local_calibration))
+    {
+        ROS_ERROR("Saving local calibration %s failed.",
+                  save_local_calibration.request.destination.c_str());
+
+        box("Saving local calibration failed.", false, QMessageBox::Critical);
+        return;
+    }
+
     ROS_INFO("Initiate recording");
     if(!ACTION(Record).waitForServer(ros::Duration(0.5)))
     {
@@ -313,6 +349,9 @@ void AcquisitionController::onStartRecording()
 
 void AcquisitionController::onStopRecording()
 {
+    // reset settings to force a new recording location
+    setActivity("settings-applied", false);
+
     ACTION(Record).cancelAllGoals();
     ROS_INFO("Stopping recording ...");
 }
@@ -489,6 +528,102 @@ void AcquisitionController::onCompleteLocalCalibration()
     ACTION_SEND_GOAL(AcquisitionController,
                      depth_sensor_vicon_calibration,
                      CompleteLocalCalibration);
+}
+
+void AcquisitionController::onSaveGlobalCalibration()
+{
+    QString dir = QFileDialog::getSaveFileName(
+                    widget_,
+                    "Save global calibration",
+                    (recording_destination_dir_ + "/global_calibration.txt").c_str());
+
+    if (!dir.isEmpty())
+    {
+        SaveGlobalCalibration save_gobal_calibration;
+        save_gobal_calibration.request.destination = dir.toStdString();
+        if (ros::service::call(SaveGlobalCalibration::Request::SERVICE_NAME,
+                               save_gobal_calibration))
+        {
+            ROS_INFO("Global calibration saved to %s", dir.toStdString().c_str());
+        }
+        else
+        {
+            ROS_ERROR("Saving global calibration %s failed.", dir.toStdString().c_str());
+        }
+    }
+}
+
+void AcquisitionController::onSaveLocalCalibration()
+{
+    QString dir = QFileDialog::getSaveFileName(
+                    widget_,
+                    "Save local calibration",
+                    (recording_destination_dir_ + "/local_calibration.txt").c_str());
+
+    if (!dir.isEmpty())
+    {
+        SaveLocalCalibration save_local_calibration;
+        save_local_calibration.request.destination = dir.toStdString();
+        if (ros::service::call(SaveLocalCalibration::Request::SERVICE_NAME,
+                               save_local_calibration))
+        {
+            ROS_INFO("Local calibration saved to %s", dir.toStdString().c_str());
+        }
+        else
+        {
+            ROS_ERROR("Saving local calibration %s failed.", dir.toStdString().c_str());
+        }
+    }
+}
+
+void AcquisitionController::onLoadGlobalCalibration()
+{
+    QString dir = QFileDialog::getOpenFileName(
+                    widget_,
+                    "Load global calibration",
+                    (recording_destination_dir_ + "/global_calibration.txt").c_str());
+
+    if (!dir.isEmpty())
+    {
+        LoadGlobalCalibration load_global_calibration;
+        load_global_calibration.request.source = dir.toStdString();
+        if (ros::service::call(LoadGlobalCalibration::Request::SERVICE_NAME,
+                               load_global_calibration))
+        {
+            setActivity("globally-calibrated", true);
+
+            ROS_INFO("Global calibration %s loaded", dir.toStdString().c_str());
+        }
+        else
+        {
+            ROS_ERROR("Loading global calibration %s failed.", dir.toStdString().c_str());
+        }
+    }
+}
+
+void AcquisitionController::onLoadLocalCalibration()
+{
+    QString dir = QFileDialog::getOpenFileName(
+                    widget_,
+                    "Save local calibration",
+                    (recording_destination_dir_ + "/local_calibration.txt").c_str());
+
+    if (!dir.isEmpty())
+    {
+        LoadLocalCalibration load_local_calibration;
+        load_local_calibration.request.source = dir.toStdString();
+        if (ros::service::call(SaveLocalCalibration::Request::SERVICE_NAME,
+                               load_local_calibration))
+        {
+            setActivity("locally-calibrated", true);
+
+            ROS_INFO("Local calibration %s loaded", dir.toStdString().c_str());
+        }
+        else
+        {
+            ROS_ERROR("Loading local calibration %s failed.", dir.toStdString().c_str());
+        }
+    }
 }
 
 void AcquisitionController::onStartDepthSensor()
@@ -711,7 +846,8 @@ void AcquisitionController::onUpdateStatus()
         ui_.completeGlobalCalibrationButton->setEnabled(isActive("global-calibration-running")
                                                         && isActive("global-calibration-finished"));
         ui_.loadGlobalCalibButton->setEnabled(!isActive("global-calibration-running"));
-        ui_.saveGlobalCalibButton->setEnabled(!isActive("global-calibration-running"));
+        ui_.saveGlobalCalibButton->setEnabled(!isActive("global-calibration-running")
+                                              && isActive("globally-calibrated"));
     }
 
         // local calibration
@@ -726,7 +862,8 @@ void AcquisitionController::onUpdateStatus()
         ui_.completeLocalCalibrationButton->setEnabled(isActive("local-calibration-running")
                                                        && isActive("local-calibration-finished"));
         ui_.loadLocalCalibButton->setEnabled(!isActive("local-calibration-running"));
-        ui_.saveLocalCalibButton->setEnabled(!isActive("local-calibration-running"));
+        ui_.saveLocalCalibButton->setEnabled(!isActive("local-calibration-running")
+                                             && isActive("locally-calibrated"));
     }
 
     // == recording == //
@@ -1219,6 +1356,8 @@ bool AcquisitionController::validateRecordName(const QString& style_error)
         return box("Record already exists! Please select a different name!");
     }
     ui_.recordNamelabel->setStyleSheet("");
+
+    recording_destination_dir_ = (record_dir/ui_.recordNameLineEdit->text().toStdString()).string();
 
     return true;
 }

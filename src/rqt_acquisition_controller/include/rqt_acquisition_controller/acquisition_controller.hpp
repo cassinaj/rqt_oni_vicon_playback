@@ -160,6 +160,11 @@ namespace rqt_acquisition_controller
         void onLocalCalibrationFeedback(int progress, int max_progress, QString status);
         void onCompleteLocalCalibration();
 
+        void onSaveGlobalCalibration();
+        void onSaveLocalCalibration();
+        void onLoadGlobalCalibration();
+        void onLoadLocalCalibration();
+
     signals:
         void feedbackReceived(int vicon_frames, int kinect_frames, u_int64_t duration);
         void setStatusIcon(QString setting, QString url);
@@ -213,7 +218,9 @@ namespace rqt_acquisition_controller
         std::string global_calib_object_vicon_name_;
         std::string object_model_package_;
         std::string object_model_display_file_;
-        std::string object_model_tracking_file_;       
+        std::string object_model_tracking_file_;
+
+        std::string recording_destination_dir_;
     };
 }
 

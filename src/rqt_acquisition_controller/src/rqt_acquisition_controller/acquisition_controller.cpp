@@ -67,10 +67,9 @@
 
 #include <rviz/load_resource.h>
 
-#include <oni_vicon_recorder/namespaces.hpp>
-
 using namespace rviz;
 using namespace rqt_acquisition_controller;
+namespace calibration = depth_sensor_vicon_calibration;
 
 AcquisitionController::AcquisitionController():
     rqt_gui_cpp::Plugin(),
@@ -796,12 +795,14 @@ ACTION_ON_FEEDBACK(AcquisitionController, oni_vicon_recorder, Record)
     setActivity("recording", true);
 
 
-    emit feedbackReceived(feedback->vicon_frames, feedback->kinect_frames, feedback->duration);
+    emit feedbackReceived(ACTION_FEEDBACK(Record)->vicon_frames,
+                          ACTION_FEEDBACK(Record)->kinect_frames,
+                          ACTION_FEEDBACK(Record)->duration);
 }
 
 ACTION_ON_DONE(AcquisitionController, oni_vicon_recorder, Record)
 {    
-    switch (state.state_)
+    switch (ACTION_STATE(Record).state_)
     {
     case actionlib::SimpleClientGoalState::SUCCEEDED:
         statusItem("Recording status").status->setText("Stopped");
@@ -820,17 +821,18 @@ ACTION_ON_FEEDBACK(AcquisitionController, oni_vicon_recorder, RunDepthSensor)
     statusItem("Depth Sensor").status->setText("Running");
     emit setStatusIcon("Depth Sensor", "package://rviz/icons/ok.png");
 
-    statusItem("Device Type").status->setText(feedback->device_type.c_str());
-    statusItem("Device Name").status->setText(feedback->device_name.c_str());
-    statusItem("Mode").status->setText(feedback->mode.c_str());
+    statusItem("Device Type").status->setText(ACTION_FEEDBACK(RunDepthSensor)->device_type.c_str());
+    statusItem("Device Name").status->setText(ACTION_FEEDBACK(RunDepthSensor)->device_name.c_str());
+    statusItem("Mode").status->setText(ACTION_FEEDBACK(RunDepthSensor)->mode.c_str());
 
     // set modes
     ui_.deviceModeComboBox->clear();
-    for (int i = 0; i < feedback->modes.size(); i++)
+    for (int i = 0; i < ACTION_FEEDBACK(RunDepthSensor)->modes.size(); i++)
     {
-        ui_.deviceModeComboBox->addItem(feedback->modes[i].c_str());
+        ui_.deviceModeComboBox->addItem(ACTION_FEEDBACK(RunDepthSensor)->modes[i].c_str());
 
-        if (feedback->mode.compare(feedback->modes[i]) == 0)
+        if (ACTION_FEEDBACK(RunDepthSensor)->mode.compare(
+                    ACTION_FEEDBACK(RunDepthSensor)->modes[i]) == 0)
         {
             ui_.deviceModeComboBox->setCurrentIndex(i);
         }
@@ -845,7 +847,7 @@ ACTION_ON_DONE(AcquisitionController, oni_vicon_recorder, RunDepthSensor)
     ui_.deviceModeComboBox->clear();
     setDepthSensorClosedStatus();
 
-    switch (state.state_)
+    switch (ACTION_STATE(RunDepthSensor).state_)
     {
     case actionlib::SimpleClientGoalState::SUCCEEDED:
         ROS_INFO("Depth sensor closed.");
@@ -864,7 +866,7 @@ ACTION_ON_FEEDBACK(AcquisitionController, oni_vicon_recorder, ChangeDepthSensorM
 
 ACTION_ON_DONE(AcquisitionController, oni_vicon_recorder, ChangeDepthSensorMode)
 {
-    switch (state.state_)
+    switch (ACTION_STATE(ChangeDepthSensorMode).state_)
     {
     case actionlib::SimpleClientGoalState::SUCCEEDED:
         statusItem("Mode").status->setText(ui_.deviceModeComboBox->itemText(
@@ -883,7 +885,7 @@ ACTION_ON_ACTIVE(AcquisitionController, oni_vicon_recorder, ConnectToVicon) { }
 
 ACTION_ON_FEEDBACK(AcquisitionController, oni_vicon_recorder, ConnectToVicon)
 {
-    if (feedback->connected)
+    if (ACTION_FEEDBACK(ConnectToVicon)->connected)
     {        
         statusItem("Vicon").status->setText("Online");
         emit setStatusIcon("Vicon", "package://rviz/icons/ok.png");        
@@ -895,7 +897,7 @@ ACTION_ON_FEEDBACK(AcquisitionController, oni_vicon_recorder, ConnectToVicon)
         ROS_INFO("Connecting to Vicon system failed.");
     }
 
-    setActivity("vicon-connected", feedback->connected);
+    setActivity("vicon-connected", ACTION_FEEDBACK(ConnectToVicon)->connected);
 }
 
 ACTION_ON_DONE(AcquisitionController, oni_vicon_recorder, ConnectToVicon)
@@ -903,7 +905,7 @@ ACTION_ON_DONE(AcquisitionController, oni_vicon_recorder, ConnectToVicon)
     statusItem("Vicon").status->setText("Offline");
     emit setStatusIcon("Vicon", "none");
 
-    switch (state.state_)
+    switch (ACTION_STATE(ConnectToVicon).state_)
     {
     case actionlib::SimpleClientGoalState::SUCCEEDED:
         ROS_INFO("Vicon system connection closed.");
@@ -926,16 +928,16 @@ ACTION_ON_ACTIVE(AcquisitionController, depth_sensor_vicon_calibration, GlobalCa
 
 ACTION_ON_FEEDBACK(AcquisitionController, depth_sensor_vicon_calibration, GlobalCalibration)
 {
-    emit globalCalibrationFeedback(feedback->progress,
-                                   feedback->max_progress,
-                                   feedback->status.c_str());
+    emit globalCalibrationFeedback(ACTION_FEEDBACK(GlobalCalibration)->progress,
+                                   ACTION_FEEDBACK(GlobalCalibration)->max_progress,
+                                   ACTION_FEEDBACK(GlobalCalibration)->status.c_str());
 
-    setActivity("global-calibration-finished", feedback->finished);
+    setActivity("global-calibration-finished", ACTION_FEEDBACK(GlobalCalibration)->finished);
 }
 
 ACTION_ON_DONE(AcquisitionController, depth_sensor_vicon_calibration, GlobalCalibration)
 {    
-    switch (state.state_)
+    switch (ACTION_STATE(GlobalCalibration).state_)
     {
     case actionlib::SimpleClientGoalState::SUCCEEDED:
         setActivity("globally-calibrated", true);
@@ -1003,16 +1005,16 @@ ACTION_ON_ACTIVE(AcquisitionController, depth_sensor_vicon_calibration, LocalCal
 
 ACTION_ON_FEEDBACK(AcquisitionController, depth_sensor_vicon_calibration, LocalCalibration)
 {
-    emit localCalibrationFeedback(feedback->progress,
-                                  feedback->max_progress,
-                                  feedback->status.c_str());
+    emit localCalibrationFeedback(ACTION_FEEDBACK(LocalCalibration)->progress,
+                                  ACTION_FEEDBACK(LocalCalibration)->max_progress,
+                                  ACTION_FEEDBACK(LocalCalibration)->status.c_str());
 
-    setActivity("local-calibration-finished", feedback->finished);
+    setActivity("local-calibration-finished", ACTION_FEEDBACK(LocalCalibration)->finished);
 }
 
 ACTION_ON_DONE(AcquisitionController, depth_sensor_vicon_calibration, LocalCalibration)
 {
-    switch (state.state_)
+    switch (ACTION_STATE(LocalCalibration).state_)
     {
     case actionlib::SimpleClientGoalState::SUCCEEDED:
         setActivity("locally-calibrated", true);
@@ -1033,42 +1035,12 @@ ACTION_ON_ACTIVE(AcquisitionController, depth_sensor_vicon_calibration, Continue
     ROS_INFO("Continue local calibration ...");
 }
 
-ACTION_ON_FEEDBACK(AcquisitionController, depth_sensor_vicon_calibration, ContinueLocalCalibration)
-{
-}
+ACTION_ON_FEEDBACK(AcquisitionController, depth_sensor_vicon_calibration, ContinueLocalCalibration){}
+ACTION_ON_DONE(AcquisitionController, depth_sensor_vicon_calibration, ContinueLocalCalibration){}
 
-ACTION_ON_DONE(AcquisitionController, depth_sensor_vicon_calibration, ContinueLocalCalibration)
-{
-}
-
-ACTION_ON_ACTIVE(AcquisitionController, depth_sensor_vicon_calibration, CompleteLocalCalibration)
-{
-}
-
-ACTION_ON_FEEDBACK(AcquisitionController, depth_sensor_vicon_calibration, CompleteLocalCalibration)
-{
-}
-
-ACTION_ON_DONE(AcquisitionController, depth_sensor_vicon_calibration, CompleteLocalCalibration)
-{
-    /*
-    switch (state.state_)
-    {
-    case actionlib::SimpleClientGoalState::SUCCEEDED:
-        ROS_INFO("Local calibration completed.");
-
-        setActivity("local-calibration-continued", false);
-        setActivity("local-calibration-running", false);
-        setActivity("local-calibration-finished", false);
-        break;
-    default:
-        setActivity("local-calibration-running", false);
-        setActivity("local-calibration-continued", false);
-        setActivity("local-calibration-finished", false);
-        ROS_INFO("Local calibration aborted.");
-    }
-    */
-}
+ACTION_ON_ACTIVE(AcquisitionController, depth_sensor_vicon_calibration, CompleteLocalCalibration){}
+ACTION_ON_FEEDBACK(AcquisitionController, depth_sensor_vicon_calibration, CompleteLocalCalibration){}
+ACTION_ON_DONE(AcquisitionController, depth_sensor_vicon_calibration, CompleteLocalCalibration){}
 
 // ============================================================================================== //
 // == Implementation details ==================================================================== //

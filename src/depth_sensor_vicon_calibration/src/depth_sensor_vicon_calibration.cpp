@@ -54,7 +54,6 @@
 
 #include <oni_vicon_recorder/ViconObjectPose.h>
 
-
 using namespace depth_sensor_vicon_calibration;
 using namespace visualization_msgs;
 using namespace simple_object_tracker;
@@ -83,7 +82,7 @@ Calibration::Calibration(ros::NodeHandle& node_handle,
                                     boost::bind(&Calibration::continueGlobalCalibrationCB, this,_1),
                                     false),
     complete_global_calibration_as_(node_handle,
-                                    CompleteLocalCalibrationGoal::ACTION_NAME,
+                                    CompleteGlobalCalibrationGoal::ACTION_NAME,
                                     boost::bind(&Calibration::completeGlobalCalibrationCB, this,_1),
                                     false),
     local_calibration_as_(node_handle,

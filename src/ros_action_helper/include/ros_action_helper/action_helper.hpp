@@ -83,6 +83,9 @@
 
 #define ACTION(action_name) action_name##_ac_
 #define ACTION_GOAL(action_name) action_name##_goal_
+#define ACTION_STATE(action_name) state
+#define ACTION_RESULT(action_name) result
+#define ACTION_FEEDBACK(action_name) feedback
 
 #define ACTION_IMPLEMENT_CLIENT(action_namespace, action_name) \
     public: \

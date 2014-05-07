@@ -63,10 +63,14 @@ catkin_package(
 ## Your package locations should be listed before other locations
 include_directories(include ${catkin_INCLUDE_DIRS})
 
-set(headers include/${PROJECT_NAME}/depth_sensor_vicon_calibration.hpp)
+set(headers
+    include/${PROJECT_NAME}/depth_sensor_vicon_calibration.hpp
+    include/${PROJECT_NAME}/transform.hpp
+)
 
 add_library(depth_sensor_vicon_calibration
-   src/depth_sensor_vicon_calibration.cpp
+   src/${PROJECT_NAME}/depth_sensor_vicon_calibration.cpp
+   src/${PROJECT_NAME}/transform.cpp
    ${headers}
 )
 

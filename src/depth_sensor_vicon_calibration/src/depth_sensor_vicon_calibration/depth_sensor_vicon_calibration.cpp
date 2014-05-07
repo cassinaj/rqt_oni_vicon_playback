@@ -100,14 +100,14 @@ Calibration::Calibration(ros::NodeHandle& node_handle,
     global_calibration_complete_(false),
     local_calibration_complete_(false)
 {
+    // advertise calibration markers
     global_calib_publisher_ =
             node_handle_.advertise<visualization_msgs::Marker>("global_calibration_pose", 0);
 
     local_calib_publisher_ =
             node_handle_.advertise<visualization_msgs::Marker>("local_calibration_pose", 0);
 
-    global_calibration_transform_.setIdentity();
-
+    // start action servers
     global_calibration_as_.start();
     continue_global_calibration_as_.start();
     complete_global_calibration_as_.start();
@@ -116,11 +116,30 @@ Calibration::Calibration(ros::NodeHandle& node_handle,
     continue_local_calibration_as_.start();
     complete_local_calibration_as_.start();
 
-    /*
-    save_global_calib_srv_ = node_handle.advertiseService(vicon_objects_srv_name,
-                                                          &ViconRecorder::viconObjectsCB,
-                                                          this);
-                                                          */
+    // advertise services
+    save_global_calib_srv_ = node_handle.advertiseService(
+                SaveGobalCalibration::Request::SERVICE_NAME
+                &Calibration::saveGlobalCalibrationCB,
+                this);
+
+    load_global_calib_srv_ = node_handle.advertiseService(
+                LoadGobalCalibration::Request::SERVICE_NAME
+                &Calibration::loadGlobalCalibrationCB,
+                this);
+
+    save_local_calib_srv_ = node_handle.advertiseService(
+                SaveLocalCalibration::Request::SERVICE_NAME
+                &Calibration::saveLocalCalibrationCB,
+                this);
+
+    load_local_calib_srv_ = node_handle.advertiseService(
+                LoadLocalCalibration::Request::SERVICE_NAME
+                &Calibration::loadLocalCalibrationCB,
+                this);
+
+
+    global_calibration_transform_.setIdentity();
+    local_calibration_transform_.setIdentity();
 }
 
 Calibration::~Calibration()
@@ -541,6 +560,32 @@ void Calibration::processLocalCalibrationFeedback(const InteractiveMarkerFeedbac
 {
     current_local_marker_pose_ = feedback->pose;
 }
+
+// ============================================================================================== //
+// == Service callbacks ========================================================================= //
+// ============================================================================================== //
+
+bool Calibration::saveGlobalCalibrationCB(SaveGobalCalibration::Request& request,
+                                          SaveGobalCalibration::Response& response)
+{
+}
+
+bool Calibration::loadGlobalCalibrationCB(LoadGobalCalibration::Request& request,
+                                          LoadGobalCalibration::Response& response)
+{
+}
+
+bool Calibration::saveLocalCalibrationCB(SaveLocalCalibration::Request& request,
+                                         SaveLocalCalibration::Response& response)
+{
+}
+
+bool Calibration::loadLocalCalibrationCB(LoadLocalCalibration::Request& request,
+                                         LoadLocalCalibration::Response& response)
+{
+
+}
+
 
 // ============================================================================================== //
 // == Helper ==================================================================================== //

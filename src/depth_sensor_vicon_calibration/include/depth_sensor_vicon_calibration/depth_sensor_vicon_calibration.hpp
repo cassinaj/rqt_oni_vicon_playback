@@ -74,6 +74,12 @@
 #include <depth_sensor_vicon_calibration/ContinueLocalCalibrationAction.h>
 #include <depth_sensor_vicon_calibration/CompleteLocalCalibrationAction.h>
 
+// services
+#include <depth_sensor_vicon_calibration/SaveGobalCalibration.h>
+#include <depth_sensor_vicon_calibration/LoadGobalCalibration.h>
+#include <depth_sensor_vicon_calibration/SaveLocalCalibration.h>
+#include <depth_sensor_vicon_calibration/LoadLocalCalibration.h>
+
 #include <simple_object_tracker/spkf_object_tracker.hpp>
 
 namespace depth_sensor_vicon_calibration
@@ -88,28 +94,35 @@ namespace depth_sensor_vicon_calibration
                     std::string global_calibration_object,
                     std::string global_calibration_object_display);
         ~Calibration();
-
+    public: /* actions */
         void globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal);
         void continueGlobalCalibrationCB(const ContinueGlobalCalibrationGoalConstPtr& goal);
-        void completeGlobalCalibrationCB(const CompleteGlobalCalibrationGoalConstPtr& goal);
-        void processGlobalCalibrationFeedback(
-                const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
+        void completeGlobalCalibrationCB(const CompleteGlobalCalibrationGoalConstPtr& goal);        
 
         void localCalibrationCB(const LocalCalibrationGoalConstPtr& goal);
         void continueLocalCalibrationCB(const ContinueLocalCalibrationGoalConstPtr& goal);
         void completeLocalCalibrationCB(const CompleteLocalCalibrationGoalConstPtr& goal);
+
+    public: /* services */
+        void processGlobalCalibrationFeedback(
+                const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
+
         void processLocalCalibrationFeedback(
                 const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
 
-        void saveGlobalCalibration();
-        void loadGlobalCalibration();
-        void saveLocalCalibration();
-        void loadLocalCalibration();
+        bool saveGlobalCalibrationCB(SaveGobalCalibration::Request& request,
+                                     SaveGobalCalibration::Response& response);
+        bool loadGlobalCalibrationCB(LoadGobalCalibration::Request& request,
+                                     LoadGobalCalibration::Response& response);
+        bool saveLocalCalibrationCB(SaveLocalCalibration::Request& request,
+                                    SaveLocalCalibration::Response& response);
+        bool loadLocalCalibrationCB(LoadLocalCalibration::Request& request,
+                                    LoadLocalCalibration::Response& response);
 
-        void getGlobalCalibration();
-        void getLocalCalibration();
+        void getGlobalCalibrationCB();
+        void getLocalCalibrationCB();
 
-    private: /* Helper functions */
+    private: /* implementation details */
         void publishGlobalStatus(const std::string& status, GlobalCalibrationFeedback& feedback);
         void publishLocalStatus(const std::string& status, LocalCalibrationFeedback& feedback);
         visualization_msgs::InteractiveMarker makeObjectMarker(const std::string& mesh_resource,

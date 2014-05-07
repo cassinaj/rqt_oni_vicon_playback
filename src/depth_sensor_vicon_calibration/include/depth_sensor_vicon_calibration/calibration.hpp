@@ -44,8 +44,8 @@
  *   Karlsruhe Institute of Technology (KIT)
  */
 
-#ifndef DEPTH_SENSOR_VICON_CALIBRATION_DEPTH_SENSOR_VICON_CALIBRATION_HPP
-#define DEPTH_SENSOR_VICON_CALIBRATION_DEPTH_SENSOR_VICON_CALIBRATION_HPP
+#ifndef DEPTH_SENSOR_VICON_CALIBRATION_CALIBRATION_HPP
+#define DEPTH_SENSOR_VICON_CALIBRATION_CALIBRATION_HPP
 
 // eigen
 #include <Eigen/Eigen>
@@ -75,12 +75,14 @@
 #include <depth_sensor_vicon_calibration/CompleteLocalCalibrationAction.h>
 
 // services
-#include <depth_sensor_vicon_calibration/SaveGobalCalibration.h>
-#include <depth_sensor_vicon_calibration/LoadGobalCalibration.h>
+#include <depth_sensor_vicon_calibration/SaveGlobalCalibration.h>
+#include <depth_sensor_vicon_calibration/LoadGlobalCalibration.h>
 #include <depth_sensor_vicon_calibration/SaveLocalCalibration.h>
 #include <depth_sensor_vicon_calibration/LoadLocalCalibration.h>
 
 #include <simple_object_tracker/spkf_object_tracker.hpp>
+
+#include "depth_sensor_vicon_calibration/transform.hpp"
 
 namespace depth_sensor_vicon_calibration
 {
@@ -110,10 +112,10 @@ namespace depth_sensor_vicon_calibration
         void processLocalCalibrationFeedback(
                 const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
 
-        bool saveGlobalCalibrationCB(SaveGobalCalibration::Request& request,
-                                     SaveGobalCalibration::Response& response);
-        bool loadGlobalCalibrationCB(LoadGobalCalibration::Request& request,
-                                     LoadGobalCalibration::Response& response);
+        bool saveGlobalCalibrationCB(SaveGlobalCalibration::Request& request,
+                                     SaveGlobalCalibration::Response& response);
+        bool loadGlobalCalibrationCB(LoadGlobalCalibration::Request& request,
+                                     LoadGlobalCalibration::Response& response);
         bool saveLocalCalibrationCB(SaveLocalCalibration::Request& request,
                                     SaveLocalCalibration::Response& response);
         bool loadLocalCalibrationCB(LoadLocalCalibration::Request& request,
@@ -135,15 +137,6 @@ namespace depth_sensor_vicon_calibration
                            float g = 1,
                            float b = 0,
                            float a = 1.0);
-        void msgPoseToTfPose(const geometry_msgs::Pose& pose,
-                             tf::Vector3& position,
-                             tf::Quaternion& orientation);
-
-        void tfPoseToMsgPose(const tf::Vector3& position,
-                             const tf::Quaternion& orientation,
-                             geometry_msgs::Pose& pose);
-        void msgPoseToTfTransform(const geometry_msgs::Pose& pose, tf::Transform& transform);
-        void tfTransformToMsgPose(const tf::Transform& transform, geometry_msgs::Pose& pose);
         void cachePose(const geometry_msgs::Pose& pose, const std::string dest);
         void loadPoseFromCache(const std::string src, geometry_msgs::Pose& pose);
 
@@ -181,6 +174,8 @@ namespace depth_sensor_vicon_calibration
 
         tf::Transform global_calibration_transform_;
         tf::Transform local_calibration_transform_;
+
+        Transform calibraion_transform_;
 
         bool global_calibration_complete_;
         boost::condition_variable global_calib_cond_;

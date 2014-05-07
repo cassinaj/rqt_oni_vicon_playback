@@ -44,7 +44,7 @@
  *   Karlsruhe Institute of Technology (KIT)
  */
 
-#include "depth_sensor_vicon_calibration/depth_sensor_vicon_calibration.hpp"
+#include "depth_sensor_vicon_calibration/calibration.hpp"
 
 #include <boost/bind.hpp>
 #include <algorithm>
@@ -91,11 +91,11 @@ Calibration::Calibration(ros::NodeHandle& node_handle,
                          false),
     continue_local_calibration_as_(node_handle,
                                   ContinueLocalCalibrationGoal::ACTION_NAME,
-                                  boost::bind(&Calibration::continueLocalCalibrationCB, this,_1),
+                                  boost::bind(&Calibration::continueLocalCalibrationCB, this, _1),
                                   false),
     complete_local_calibration_as_(node_handle,
                                   CompleteLocalCalibrationGoal::ACTION_NAME,
-                                  boost::bind(&Calibration::completeLocalCalibrationCB, this,_1),
+                                  boost::bind(&Calibration::completeLocalCalibrationCB, this, _1),
                                   false),
     global_calibration_complete_(false),
     local_calibration_complete_(false)
@@ -118,25 +118,24 @@ Calibration::Calibration(ros::NodeHandle& node_handle,
 
     // advertise services
     save_global_calib_srv_ = node_handle.advertiseService(
-                SaveGobalCalibration::Request::SERVICE_NAME
+                SaveGlobalCalibration::Request::SERVICE_NAME,
                 &Calibration::saveGlobalCalibrationCB,
                 this);
 
     load_global_calib_srv_ = node_handle.advertiseService(
-                LoadGobalCalibration::Request::SERVICE_NAME
+                LoadGlobalCalibration::Request::SERVICE_NAME,
                 &Calibration::loadGlobalCalibrationCB,
                 this);
 
     save_local_calib_srv_ = node_handle.advertiseService(
-                SaveLocalCalibration::Request::SERVICE_NAME
+                SaveLocalCalibration::Request::SERVICE_NAME,
                 &Calibration::saveLocalCalibrationCB,
                 this);
 
     load_local_calib_srv_ = node_handle.advertiseService(
-                LoadLocalCalibration::Request::SERVICE_NAME
+                LoadLocalCalibration::Request::SERVICE_NAME,
                 &Calibration::loadLocalCalibrationCB,
                 this);
-
 
     global_calibration_transform_.setIdentity();
     local_calibration_transform_.setIdentity();
@@ -246,11 +245,17 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
     if (ros::service::call(ViconObjectPose::Request::SERVICE_NAME, vicon_object_pose))
     {
         // calculate global transformation matrix
+        calibraion_transform_.calibrateGlobally(
+                    Transform::toTfPose(vicon_object_pose.response.object_pose),
+                    Transform::toTfPose(object_tracker.getCurrentPose()));
+
+        /*
         tf::Transform T_o_v;
         tf::Transform T_o_d;
         msgPoseToTfTransform(vicon_object_pose.response.object_pose, T_o_v);
         msgPoseToTfTransform(object_tracker.getCurrentPose(), T_o_d);
         global_calibration_transform_ = T_o_d * T_o_v.inverse();
+        */
 
         feedback.finished = true;
         publishGlobalStatus("Global calibration ready.", feedback);
@@ -264,32 +269,36 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
             if (ros::service::call(ViconObjectPose::Request::SERVICE_NAME, vicon_object_pose))
             {
                 // vicon pose to depth sensor pose and publish marker
-                tf::Transform vicon_obj_transform;
-                msgPoseToTfTransform(vicon_object_pose.response.object_pose, vicon_obj_transform);
-                vicon_obj_transform = global_calibration_transform_ * vicon_obj_transform;
+                tf::Pose vicon_obj_pose =
+                        calibraion_transform_.viconToDepthSensor(
+                            Transform::toTfPose(vicon_object_pose.response.object_pose));
 
-                geometry_msgs::Pose vicon_pose;
-                tfTransformToMsgPose(vicon_obj_transform, vicon_pose);
-                publishMarker(vicon_pose,
+                publishMarker(Transform::toMsgPose(vicon_obj_pose),
                               global_calibration_object_display_,
                               global_calib_publisher_,
                               0, 1, 0);
 
-                // set coordinates
-                tf::Transform transform_ds_obj;
-                msgPoseToTfTransform(object_tracker.getCurrentPose(), transform_ds_obj);
-                tf_broadcaster_.sendTransform(tf::StampedTransform(transform_ds_obj,
-                                                                   ros::Time::now(),
-                                                                   "XTION_RGB",
-                                                                   "ds_object_frame"));
-                tf_broadcaster_.sendTransform(tf::StampedTransform(vicon_obj_transform,
-                                                                   ros::Time::now(),
-                                                                   "XTION_RGB",
-                                                                   "vicon_object_frame"));
-                tf_broadcaster_.sendTransform(tf::StampedTransform(global_calibration_transform_,
-                                                                   ros::Time::now(),
-                                                                   "XTION_RGB",
-                                                                   "vicon_wcs"));
+                // publish frames
+                tf_broadcaster_.sendTransform(
+                            tf::StampedTransform(
+                                Transform::toTfTransform(object_tracker.getCurrentPose()),
+                                ros::Time::now(),
+                                "XTION_RGB",
+                                "ds_object_frame"));
+
+                tf_broadcaster_.sendTransform(
+                            tf::StampedTransform(
+                                vicon_obj_pose,
+                                ros::Time::now(),
+                                "XTION_RGB",
+                                "vicon_object_frame"));
+
+                tf_broadcaster_.sendTransform(
+                            tf::StampedTransform(
+                                calibraion_transform_.getViconGlobalFrame(),
+                                ros::Time::now(),
+                                "XTION_RGB",
+                                "vicon_wcs"));
             }
         }
 
@@ -449,12 +458,17 @@ void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
     if (ros::service::call(ViconObjectPose::Request::SERVICE_NAME, vicon_object_pose))
     {
         // calculate local transformation
+        calibraion_transform_.calibrateLocally(
+                    Transform::toTfPose(vicon_object_pose.response.object_pose),
+                    Transform::toTfPose(object_tracker.getCurrentPose()));
 
+        /*
         tf::Transform T_o_v;
         tf::Transform T_o_d;
         msgPoseToTfTransform(vicon_object_pose.response.object_pose, T_o_v);
         msgPoseToTfTransform(object_tracker.getCurrentPose(), T_o_d);
         local_calibration_transform_ = T_o_d.inverse() * global_calibration_transform_ * T_o_v;
+        */
 
         feedback.finished = true;
         publishLocalStatus("Local calibration ready.", feedback);
@@ -468,6 +482,7 @@ void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
             if (ros::service::call(ViconObjectPose::Request::SERVICE_NAME, vicon_object_pose))
             {
                 // vicon pose to depth sensor pose and publish marker
+                /*
                 tf::Transform vicon_obj_transform;
                 msgPoseToTfTransform(vicon_object_pose.response.object_pose, vicon_obj_transform);
 
@@ -493,18 +508,53 @@ void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
                                                                    "XTION_RGB",
                                                                    "vicon_object_frame"));
 
-                // set coordinates
+
                 tf::Transform transform_ds_obj;
                 msgPoseToTfTransform(object_tracker.getCurrentPose(), transform_ds_obj);
                 tf_broadcaster_.sendTransform(tf::StampedTransform(transform_ds_obj,
                                                                    ros::Time::now(),
                                                                    "XTION_RGB",
                                                                    "ds_object_frame"));
+                */
 
-                tf_broadcaster_.sendTransform(tf::StampedTransform(global_calibration_transform_,
-                                                                   ros::Time::now(),
-                                                                   "XTION_RGB",
-                                                                   "vicon_wcs"));
+                tf::Pose vicon_obj_pose =
+                        calibraion_transform_.viconToDepthSensor(
+                            Transform::toTfPose(vicon_object_pose.response.object_pose));
+
+                publishMarker(Transform::toMsgPose(vicon_obj_pose),
+                              goal->calibration_object_display,
+                              local_calib_publisher_,
+                              0, 1, 0);
+
+                // set coordinates
+                tf_broadcaster_.sendTransform(
+                            tf::StampedTransform(
+                                Transform::toTfTransform(object_tracker.getCurrentPose()),
+                                ros::Time::now(),
+                                "XTION_RGB",
+                                "ds_object_frame"));
+
+                tf_broadcaster_.sendTransform(
+                            tf::StampedTransform(
+                                vicon_obj_pose,
+                                ros::Time::now(),
+                                "XTION_RGB",
+                                "vicon_ds_object_frame"));
+
+                tf_broadcaster_.sendTransform(
+                            tf::StampedTransform(
+                                calibraion_transform_.getViconGlobalFrame()
+                                    * Transform::toTfPose(vicon_object_pose.response.object_pose),
+                                ros::Time::now(),
+                                "XTION_RGB",
+                                "vicon_object_frame"));
+
+                tf_broadcaster_.sendTransform(
+                            tf::StampedTransform(
+                                calibraion_transform_.getViconGlobalFrame(),
+                                ros::Time::now(),
+                                "XTION_RGB",
+                                "vicon_wcs"));
             }
         }
 
@@ -565,25 +615,56 @@ void Calibration::processLocalCalibrationFeedback(const InteractiveMarkerFeedbac
 // == Service callbacks ========================================================================= //
 // ============================================================================================== //
 
-bool Calibration::saveGlobalCalibrationCB(SaveGobalCalibration::Request& request,
-                                          SaveGobalCalibration::Response& response)
+bool Calibration::saveGlobalCalibrationCB(SaveGlobalCalibration::Request& request,
+                                          SaveGlobalCalibration::Response& response)
 {
+    if (calibraion_transform_.saveGlobalCalibration(request.destination))
+    {
+        ROS_INFO("Global calibration saved to %s", request.destination.c_str());
+        return true;
+    }
+
+    ROS_ERROR("Failed to save global calibration to %s", request.destination.c_str());
+    return false;
 }
 
-bool Calibration::loadGlobalCalibrationCB(LoadGobalCalibration::Request& request,
-                                          LoadGobalCalibration::Response& response)
+bool Calibration::loadGlobalCalibrationCB(LoadGlobalCalibration::Request& request,
+                                          LoadGlobalCalibration::Response& response)
 {
+    if (calibraion_transform_.loadGlobalCalibration(request.source))
+    {
+        ROS_INFO("Global calibration %s loaded", request.source.c_str());
+        return true;
+    }
+
+    ROS_ERROR("Failed to load global calibration from %s", request.source.c_str());
+    return false;
 }
 
 bool Calibration::saveLocalCalibrationCB(SaveLocalCalibration::Request& request,
                                          SaveLocalCalibration::Response& response)
 {
+    if (calibraion_transform_.saveLocalCalibration(request.destination))
+    {
+        ROS_INFO("Local calibration saved to %s", request.destination.c_str());
+        return true;
+    }
+
+    ROS_ERROR("Failed to save local calibration to %s", request.destination.c_str());
+    return false;
 }
 
 bool Calibration::loadLocalCalibrationCB(LoadLocalCalibration::Request& request,
                                          LoadLocalCalibration::Response& response)
 {
+    if (calibraion_transform_.loadLocalCalibration(request.source))
+    {
+        ROS_INFO("Local calibration %s loaded", request.source.c_str());
+        return true;
+    }
 
+    ROS_ERROR("Failed to load local calibration from %s", request.source.c_str());
+    return false;
 }
 
 
@@ -702,55 +783,6 @@ void Calibration::publishMarker(const geometry_msgs::Pose& pose,
     marker.mesh_resource = mesh_resource;
 
     pub.publish(marker);
-}
-
-void Calibration::msgPoseToTfPose(const geometry_msgs::Pose &pose,
-                                  tf::Vector3& position,
-                                  tf::Quaternion& orientation)
-{
-    position.setValue(pose.position.x, pose.position.y, pose.position.z);
-
-    orientation.setValue(pose.orientation.x,
-                         pose.orientation.y,
-                         pose.orientation.z,
-                         pose.orientation.w);
-}
-
-void Calibration::tfPoseToMsgPose(const tf::Vector3& position,
-                                  const tf::Quaternion& orientation,
-                                  geometry_msgs::Pose& pose)
-{
-    pose.position.x = position.getX();
-    pose.position.y = position.getY();
-    pose.position.z = position.getZ();
-
-    pose.orientation.w = orientation.getW();
-    pose.orientation.x = orientation.getX();
-    pose.orientation.y = orientation.getY();
-    pose.orientation.z = orientation.getZ();
-}
-
-void Calibration::msgPoseToTfTransform(const geometry_msgs::Pose& pose,
-                                       tf::Transform& transform)
-{
-    transform.setOrigin(tf::Vector3(pose.position.x, pose.position.y, pose.position.z));
-    transform.setRotation(tf::Quaternion(pose.orientation.x,
-                                         pose.orientation.y,
-                                         pose.orientation.z,
-                                         pose.orientation.w));
-}
-
-void Calibration::tfTransformToMsgPose(const tf::Transform& transform, geometry_msgs::Pose& pose)
-{
-    pose.position.x = transform.getOrigin().getX();
-    pose.position.y = transform.getOrigin().getY();
-    pose.position.z = transform.getOrigin().getZ();
-
-    tf::Quaternion q = transform.getRotation();
-    pose.orientation.w = q.getW();
-    pose.orientation.x = q.getX();
-    pose.orientation.y = q.getY();
-    pose.orientation.z = q.getZ();
 }
 
 void Calibration::cachePose(const geometry_msgs::Pose& pose, const std::string dest)

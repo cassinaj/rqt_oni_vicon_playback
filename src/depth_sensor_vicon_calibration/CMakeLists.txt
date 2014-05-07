@@ -34,9 +34,9 @@ add_action_files(
 add_service_files(
     DIRECTORY srv
     FILES
-    LoadGobalCalibration.srv
+    LoadGlobalCalibration.srv
     LoadLocalCalibration.srv
-    SaveGobalCalibration.srv
+    SaveGlobalCalibration.srv
     SaveLocalCalibration.srv
 )
 
@@ -64,12 +64,12 @@ catkin_package(
 include_directories(include ${catkin_INCLUDE_DIRS})
 
 set(headers
-    include/${PROJECT_NAME}/depth_sensor_vicon_calibration.hpp
+    include/${PROJECT_NAME}/calibration.hpp
     include/${PROJECT_NAME}/transform.hpp
 )
 
 add_library(depth_sensor_vicon_calibration
-   src/${PROJECT_NAME}/depth_sensor_vicon_calibration.cpp
+   src/${PROJECT_NAME}/calibration.cpp
    src/${PROJECT_NAME}/transform.cpp
    ${headers}
 )

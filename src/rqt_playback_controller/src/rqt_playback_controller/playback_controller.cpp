@@ -66,9 +66,6 @@
 #include <QPainter>
 
 #include <rviz/load_resource.h>
-
-#include <oni_vicon_recorder/namespaces.hpp>
-
 using namespace rviz;
 using namespace rqt_playback_controller;
 

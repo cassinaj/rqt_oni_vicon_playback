@@ -73,6 +73,7 @@
 #include <depth_sensor_vicon_calibration/LocalCalibrationAction.h>
 #include <depth_sensor_vicon_calibration/ContinueLocalCalibrationAction.h>
 #include <depth_sensor_vicon_calibration/CompleteLocalCalibrationAction.h>
+#include <depth_sensor_vicon_calibration/TestCalibrationAction.h>
 
 // services
 #include <depth_sensor_vicon_calibration/SaveGlobalCalibration.h>
@@ -103,13 +104,18 @@ namespace depth_sensor_vicon_calibration
 
         void localCalibrationCB(const LocalCalibrationGoalConstPtr& goal);
         void continueLocalCalibrationCB(const ContinueLocalCalibrationGoalConstPtr& goal);
-        void completeLocalCalibrationCB(const CompleteLocalCalibrationGoalConstPtr& goal);
+        void completeLocalCalibrationCB(const CompleteLocalCalibrationGoalConstPtr& goal);       
+
+        void testCalibrationCB(const TestCalibrationGoalConstPtr& goal);
 
     public: /* services */
         void processGlobalCalibrationFeedback(
                 const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
 
         void processLocalCalibrationFeedback(
+                const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
+
+        void processTestCalibrationFeedback(
                 const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
 
         bool saveGlobalCalibrationCB(SaveGlobalCalibration::Request& request,
@@ -140,6 +146,10 @@ namespace depth_sensor_vicon_calibration
         void cachePose(const geometry_msgs::Pose& pose, const std::string dest);
         void loadPoseFromCache(const std::string src, geometry_msgs::Pose& pose);
 
+
+        void testCalibration(const std::string& vicon_object_name, const std::string &object,
+                             const std::string& object_display);
+
     private:
         // parameters
         ros::NodeHandle node_handle_;
@@ -152,6 +162,7 @@ namespace depth_sensor_vicon_calibration
         // implementation details
         bool global_pose_set_;
         bool local_pose_set_;
+        bool test_pose_set_;
         actionlib::SimpleActionServer<GlobalCalibrationAction>
             global_calibration_as_;
         actionlib::SimpleActionServer<ContinueGlobalCalibrationAction>
@@ -166,11 +177,14 @@ namespace depth_sensor_vicon_calibration
         actionlib::SimpleActionServer<CompleteLocalCalibrationAction>
             complete_local_calibration_as_;
 
+        actionlib::SimpleActionServer<TestCalibrationAction>
+            test_calibration_as_;
+
         geometry_msgs::Pose current_global_marker_pose_;
         geometry_msgs::Pose current_local_marker_pose_;        
+        geometry_msgs::Pose current_test_marker_pose_;
 
-        ros::Publisher global_calib_publisher_;
-        ros::Publisher local_calib_publisher_;
+        ros::Publisher object_publisher_;
 
         tf::Transform global_calibration_transform_;
         tf::Transform local_calibration_transform_;
@@ -184,6 +198,9 @@ namespace depth_sensor_vicon_calibration
         bool local_calibration_complete_;
         boost::condition_variable local_calib_cond_;
         boost::mutex local_calib_mutex_;
+
+        boost::condition_variable test_calib_cond_;
+        boost::mutex test_calib_mutex_;
 
         tf::TransformBroadcaster tf_broadcaster_;
 

@@ -73,6 +73,7 @@ Calibration::Calibration(ros::NodeHandle& node_handle,
     global_calibration_object_display_(global_calibration_object_display),
     global_pose_set_(false),
     local_pose_set_(false),
+    test_pose_set_(false),
     global_calibration_as_(node_handle,
                            GlobalCalibrationGoal::ACTION_NAME,
                            boost::bind(&Calibration::globalCalibrationCB, this, _1),
@@ -97,15 +98,16 @@ Calibration::Calibration(ros::NodeHandle& node_handle,
                                   CompleteLocalCalibrationGoal::ACTION_NAME,
                                   boost::bind(&Calibration::completeLocalCalibrationCB, this, _1),
                                   false),
+    test_calibration_as_(node_handle,
+                         TestCalibrationGoal::ACTION_NAME,
+                         boost::bind(&Calibration::testCalibrationCB, this, _1),
+                         false),
     global_calibration_complete_(false),
     local_calibration_complete_(false)
 {
     // advertise calibration markers
-    global_calib_publisher_ =
-            node_handle_.advertise<visualization_msgs::Marker>("global_calibration_pose", 0);
-
-    local_calib_publisher_ =
-            node_handle_.advertise<visualization_msgs::Marker>("local_calibration_pose", 0);
+    object_publisher_ =
+            node_handle_.advertise<visualization_msgs::Marker>("calibration_object_pose", 0);
 
     // start action servers
     global_calibration_as_.start();
@@ -157,6 +159,9 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
 
     ROS_INFO("Global calibration started.");
 
+    // ========================================================================================== //
+    // == Display interactive marker to set initial pose and wait to continue =================== //
+    // ========================================================================================== //
     interactive_markers::InteractiveMarkerServer server("calibration_object_marker");
     InteractiveMarker global_calib_maker = makeObjectMarker(global_calibration_object_display_,
                                                             "global_calibration_marker");
@@ -184,11 +189,15 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
     publishGlobalStatus("Waiting for calibration object alignment", feedback);
 
     // wait to continue
-    while (!global_calib_cond_.timed_wait(lock, boost::posix_time::milliseconds(10))
+    while (!global_calib_cond_.timed_wait(lock, boost::posix_time::milliseconds(50))
            && !global_calibration_as_.isPreemptRequested())
     {
     }
 
+    // ========================================================================================== //
+    // == Coninued. Check for abort and continue otherwise. Start pose estimation of           == //
+    // == calibration object.                                                                  == //
+    // ========================================================================================== //
     if (global_calibration_as_.isPreemptRequested())
     {
         publishGlobalStatus("Global calibration Aborted.", feedback);
@@ -196,9 +205,11 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
         return;
     }
 
+    // remove marker
     server.clear();
     server.applyChanges();
 
+    // cache set pose for the next calibration approach. small feature to make things easier
     cachePose(current_global_marker_pose_, "global_pose");
 
     ROS_INFO("Calibrating ...");
@@ -221,6 +232,7 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
     object_tracker.run();
     feedback.progress = 4;
 
+    // track for a shot period
     while (object_tracker.iteration() <= iterations)
     {
         if (global_calibration_as_.isPreemptRequested() || !ros::ok())
@@ -243,6 +255,9 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
     feedback.progress = feedback.max_progress;
     publishGlobalStatus("Ready ", feedback);
 
+    // ========================================================================================== //
+    // == Ready to complete. Wait for complete and display result in the meanwhile. ============= //
+    // ========================================================================================== //
     ViconObjectPose vicon_object_pose;
     vicon_object_pose.request.object_name = global_calibration_object_name_;
     if (ros::service::call(ViconObjectPose::Request::SERVICE_NAME, vicon_object_pose))
@@ -251,14 +266,6 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
         calibraion_transform_.calibrateGlobally(
                     Transform::toTfPose(vicon_object_pose.response.object_pose),
                     Transform::toTfPose(object_tracker.getCurrentPose()));
-
-        /*
-        tf::Transform T_o_v;
-        tf::Transform T_o_d;
-        msgPoseToTfTransform(vicon_object_pose.response.object_pose, T_o_v);
-        msgPoseToTfTransform(object_tracker.getCurrentPose(), T_o_d);
-        global_calibration_transform_ = T_o_d * T_o_v.inverse();
-        */
 
         feedback.finished = true;
         publishGlobalStatus("Global calibration ready.", feedback);
@@ -278,7 +285,7 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
 
                 publishMarker(Transform::toMsgPose(vicon_obj_pose),
                               global_calibration_object_display_,
-                              global_calib_publisher_,
+                              object_publisher_,
                               0, 1, 0);
 
                 // publish frames
@@ -303,6 +310,8 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
                                 "XTION_RGB",
                                 "vicon_wcs"));
             }
+
+            ros::spinOnce();
         }
 
         if (global_calibration_as_.isPreemptRequested() && !global_calibration_complete_)
@@ -373,6 +382,9 @@ void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
     ROS_INFO("local_calibration_object = %s", goal->calibration_object.c_str());
     ROS_INFO("local_calibration_object_display = %s", goal->calibration_object_display.c_str());
 
+    // ========================================================================================== //
+    // == Display interactive marker to set initial pose and wait to continue =================== //
+    // ========================================================================================== //
     interactive_markers::InteractiveMarkerServer server("calibration_object_marker");
     InteractiveMarker local_calib_maker = makeObjectMarker(goal->calibration_object_display,
                                                            "local_calibration_marker");
@@ -405,6 +417,10 @@ void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
     {
     }
 
+    // ========================================================================================== //
+    // == Coninued. Check for abort and continue otherwise. Start pose estimation of           == //
+    // == object.                                                                              == //
+    // ========================================================================================== //
     if (local_calibration_as_.isPreemptRequested())
     {
         publishLocalStatus("Local calibration Aborted.", feedback);
@@ -456,6 +472,9 @@ void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
         ros::spinOnce();
     }
 
+    // ========================================================================================== //
+    // == Ready to complete. Wait for complete and display result in the meanwhile. ============= //
+    // ========================================================================================== //
     ViconObjectPose vicon_object_pose;
     vicon_object_pose.request.object_name = goal->calibration_object_name;
     if (ros::service::call(ViconObjectPose::Request::SERVICE_NAME, vicon_object_pose))
@@ -464,14 +483,6 @@ void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
         calibraion_transform_.calibrateLocally(
                     Transform::toTfPose(vicon_object_pose.response.object_pose),
                     Transform::toTfPose(object_tracker.getCurrentPose()));
-
-        /*
-        tf::Transform T_o_v;
-        tf::Transform T_o_d;
-        msgPoseToTfTransform(vicon_object_pose.response.object_pose, T_o_v);
-        msgPoseToTfTransform(object_tracker.getCurrentPose(), T_o_d);
-        local_calibration_transform_ = T_o_d.inverse() * global_calibration_transform_ * T_o_v;
-        */
 
         feedback.finished = true;
         publishLocalStatus("Local calibration ready.", feedback);
@@ -485,48 +496,13 @@ void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
             if (ros::service::call(ViconObjectPose::Request::SERVICE_NAME, vicon_object_pose))
             {
                 // vicon pose to depth sensor pose and publish marker
-                /*
-                tf::Transform vicon_obj_transform;
-                msgPoseToTfTransform(vicon_object_pose.response.object_pose, vicon_obj_transform);
-
-                tf::Transform vicon_ds_obj_transform;
-                vicon_ds_obj_transform = global_calibration_transform_
-                                         * vicon_obj_transform
-                                         * local_calibration_transform_.inverse();
-                geometry_msgs::Pose vicon_pose;
-                tfTransformToMsgPose(vicon_ds_obj_transform, vicon_pose);
-                publishMarker(vicon_pose,
-                              goal->calibration_object_display,
-                              local_calib_publisher_,
-                              0, 1, 0);
-                tf_broadcaster_.sendTransform(tf::StampedTransform(vicon_ds_obj_transform,
-                                                                   ros::Time::now(),
-                                                                   "XTION_RGB",
-                                                                   "vicon_ds_object_frame"));
-
-                vicon_obj_transform = global_calibration_transform_
-                                          * vicon_obj_transform;
-                tf_broadcaster_.sendTransform(tf::StampedTransform(vicon_obj_transform,
-                                                                   ros::Time::now(),
-                                                                   "XTION_RGB",
-                                                                   "vicon_object_frame"));
-
-
-                tf::Transform transform_ds_obj;
-                msgPoseToTfTransform(object_tracker.getCurrentPose(), transform_ds_obj);
-                tf_broadcaster_.sendTransform(tf::StampedTransform(transform_ds_obj,
-                                                                   ros::Time::now(),
-                                                                   "XTION_RGB",
-                                                                   "ds_object_frame"));
-                */
-
                 tf::Pose vicon_obj_pose =
                         calibraion_transform_.viconToDepthSensor(
                             Transform::toTfPose(vicon_object_pose.response.object_pose));
 
                 publishMarker(Transform::toMsgPose(vicon_obj_pose),
                               goal->calibration_object_display,
-                              local_calib_publisher_,
+                              object_publisher_,
                               0, 1, 0);
 
                 // set coordinates
@@ -559,6 +535,8 @@ void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
                                 "XTION_RGB",
                                 "vicon_wcs"));
             }
+
+            ros::spinOnce();
         }
 
         if (local_calibration_as_.isPreemptRequested() && !local_calibration_complete_)
@@ -612,6 +590,157 @@ void Calibration::completeLocalCalibrationCB(const CompleteLocalCalibrationGoalC
 void Calibration::processLocalCalibrationFeedback(const InteractiveMarkerFeedbackConstPtr& feedback)
 {
     current_local_marker_pose_ = feedback->pose;
+}
+
+// ============================================================================================== //
+// == Testing Calibration ======================================================================= //
+// ============================================================================================== //
+
+void Calibration::testCalibration(const std::string& vicon_object_name,
+                                  const std::string& object,
+                                  const std::string& object_display)
+{
+    boost::unique_lock<boost::mutex> lock(test_calib_mutex_);
+
+    ROS_INFO("Calibration test started.");
+
+    // ========================================================================================== //
+    // == Display interactive marker to set initial pose and wait to continue =================== //
+    // ========================================================================================== //
+    interactive_markers::InteractiveMarkerServer server("object_marker");
+    InteractiveMarker test_object_marker = makeObjectMarker(object_display,
+                                                            "object_marker");
+    if (test_pose_set_)
+    {
+        test_object_marker.pose = current_test_marker_pose_;
+    }
+    else
+    {
+        loadPoseFromCache("test_pose", test_object_marker.pose);
+        current_test_marker_pose_ = test_object_marker.pose;
+        test_pose_set_ = true;
+    }
+    server.insert(test_object_marker,
+                  boost::bind(&Calibration::processTestCalibrationFeedback, this, _1));
+    server.applyChanges();
+
+    // wait to continue
+    while (!test_calib_cond_.timed_wait(lock, boost::posix_time::milliseconds(50))
+           && !test_calibration_as_.isPreemptRequested())
+    {
+    }
+
+    // ========================================================================================== //
+    // == Coninued. Check for abort and continue otherwise. Start pose estimation =============== //                                                                == //
+    // ========================================================================================== //
+    if (test_calibration_as_.isPreemptRequested())
+    {
+        ROS_INFO("Test calibration Aborted.");
+        test_calibration_as_.setAborted();
+        return;
+    }
+
+    // remove marker
+    server.clear();
+    server.applyChanges();
+
+    // cache set pose for the next calibration approach. small feature to make things easier
+    cachePose(current_test_marker_pose_, "test_pose");
+
+    ROS_INFO("Tracking ...");
+    SpkfObjectTracker object_tracker(node_handle_, "/oni_vicon_recorder");
+    object_tracker.setupParameters();
+    object_tracker.setupFilter(current_test_marker_pose_, object, object_display);
+    object_tracker.run();
+
+    ViconObjectPose vicon_object_pose;
+    vicon_object_pose.request.object_name = vicon_object_name;
+    if (ros::service::call(ViconObjectPose::Request::SERVICE_NAME, vicon_object_pose))
+    {
+        // track and publish vicon pose and frames until stop testing
+        while (!test_calib_cond_.timed_wait(lock, boost::posix_time::milliseconds(1000./30.))
+               && !test_calibration_as_.isPreemptRequested())
+        {
+            if (ros::service::call(ViconObjectPose::Request::SERVICE_NAME, vicon_object_pose))
+            {
+                // vicon pose to depth sensor pose and publish marker
+                tf::Pose vicon_obj_pose =
+                        calibraion_transform_.viconToDepthSensor(
+                            Transform::toTfPose(vicon_object_pose.response.object_pose));
+
+                publishMarker(Transform::toMsgPose(vicon_obj_pose),
+                              object_display,
+                              object_publisher_,
+                              0, 1, 0);
+
+                // set coordinates
+                tf_broadcaster_.sendTransform(
+                            tf::StampedTransform(
+                                Transform::toTfTransform(object_tracker.getCurrentPose()),
+                                ros::Time::now(),
+                                "XTION_RGB",
+                                "ds_object_frame"));
+
+                tf_broadcaster_.sendTransform(
+                            tf::StampedTransform(
+                                vicon_obj_pose,
+                                ros::Time::now(),
+                                "XTION_RGB",
+                                "vicon_ds_object_frame"));
+
+                tf_broadcaster_.sendTransform(
+                            tf::StampedTransform(
+                                calibraion_transform_.getViconGlobalFrame()
+                                    * Transform::toTfPose(vicon_object_pose.response.object_pose),
+                                ros::Time::now(),
+                                "XTION_RGB",
+                                "vicon_object_frame"));
+
+                tf_broadcaster_.sendTransform(
+                            tf::StampedTransform(
+                                calibraion_transform_.getViconGlobalFrame(),
+                                ros::Time::now(),
+                                "XTION_RGB",
+                                "vicon_wcs"));
+            }
+
+            ros::spinOnce();
+        }
+    }
+    else
+    {
+        ROS_WARN("Testing aborted. Requesting vicon pose failed");
+        test_calibration_as_.setAborted();
+        object_tracker.shutdown();
+    }
+
+    ROS_INFO("Calibration test stopped.");
+}
+
+void Calibration::testCalibrationCB(const TestCalibrationGoalConstPtr& goal)
+{
+    switch (goal->test_what)
+    {
+    case TestCalibrationGoal::GLOBAL_CALIBRATION:
+        testCalibration(global_calibration_object_name_,
+                        global_calibration_object_,
+                        global_calibration_object_display_);
+        break;
+    case TestCalibrationGoal::LOCAL_CALIBRATION:
+        testCalibration(goal->calibration_object_name,
+                        goal->calibration_object,
+                        goal->calibration_object_display);
+        break;
+    default:
+        ROS_WARN("Testing aborted. Unknown Testing source.");
+        break;
+    }
+}
+
+
+void Calibration::processTestCalibrationFeedback(const InteractiveMarkerFeedbackConstPtr &feedback)
+{
+    current_test_marker_pose_ = feedback->pose;
 }
 
 // ============================================================================================== //

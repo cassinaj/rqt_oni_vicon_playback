@@ -1,0 +1,12 @@
+string ACTION_NAME=/depth_sensor_vicon_calibration/TestCalibration
+
+int8 GLOBAL_CALIBRATION=0
+int8 LOCAL_CALIBRATION=1
+
+string calibration_object_name
+string calibration_object
+string calibration_object_display
+string calibration_object_package
+int8 test_what
+---
+---

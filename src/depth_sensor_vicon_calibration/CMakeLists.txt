@@ -29,6 +29,7 @@ add_action_files(
     LocalCalibration.action
     ContinueLocalCalibration.action
     CompleteLocalCalibration.action
+    TestCalibration.action
 )
 
 add_service_files(

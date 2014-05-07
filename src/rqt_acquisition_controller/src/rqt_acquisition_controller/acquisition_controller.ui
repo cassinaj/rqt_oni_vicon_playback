@@ -105,9 +105,9 @@
       <property name="geometry">
        <rect>
         <x>0</x>
-        <y>0</y>
-        <width>1197</width>
-        <height>865</height>
+        <y>-15</y>
+        <width>1181</width>
+        <height>880</height>
        </rect>
       </property>
       <property name="sizePolicy">
@@ -548,6 +548,9 @@
                 <property name="rightMargin">
                  <number>0</number>
                 </property>
+                <property name="bottomMargin">
+                 <number>9</number>
+                </property>
                 <item row="0" column="5">
                  <widget class="QPushButton" name="completeGlobalCalibrationButton">
                   <property name="text">
@@ -572,7 +575,7 @@
                   </property>
                  </widget>
                 </item>
-                <item row="3" column="5">
+                <item row="4" column="5">
                  <widget class="QPushButton" name="saveGlobalCalibButton">
                   <property name="text">
                    <string>             Save</string>
@@ -604,7 +607,7 @@
                   </property>
                  </widget>
                 </item>
-                <item row="1" column="0" colspan="6">
+                <item row="2" column="0" colspan="6">
                  <widget class="QLabel" name="globalCalibInfo">
                   <property name="font">
                    <font>
@@ -623,7 +626,7 @@
                   </property>
                  </widget>
                 </item>
-                <item row="3" column="4">
+                <item row="4" column="4">
                  <widget class="QPushButton" name="loadGlobalCalibButton">
                   <property name="text">
                    <string>             Load</string>
@@ -647,7 +650,7 @@
                   </property>
                  </widget>
                 </item>
-                <item row="3" column="0" colspan="4">
+                <item row="4" column="0" colspan="4">
                  <widget class="QProgressBar" name="gloablCalibProgressBar">
                   <property name="font">
                    <font>
@@ -662,6 +665,43 @@
                   </property>
                   <property name="format">
                    <string>%p%</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="5" column="0" colspan="2">
+                 <widget class="QLabel" name="label_3">
+                  <property name="text">
+                   <string>Test global calibration</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="5" column="5">
+                 <widget class="QPushButton" name="stopGlobalTestButton">
+                  <property name="text">
+                   <string>   Stop Test</string>
+                  </property>
+                  <property name="icon">
+                   <iconset theme="media-playback-stop"/>
+                  </property>
+                 </widget>
+                </item>
+                <item row="5" column="4">
+                 <widget class="QPushButton" name="continueGlobalTestButton">
+                  <property name="text">
+                   <string>   Continue</string>
+                  </property>
+                  <property name="icon">
+                   <iconset theme="forward"/>
+                  </property>
+                 </widget>
+                </item>
+                <item row="5" column="3">
+                 <widget class="QPushButton" name="startGlobalTestButton">
+                  <property name="text">
+                   <string>  Start Test</string>
+                  </property>
+                  <property name="icon">
+                   <iconset theme="forward"/>
                   </property>
                  </widget>
                 </item>
@@ -694,7 +734,7 @@
                  <number>0</number>
                 </property>
                 <property name="bottomMargin">
-                 <number>0</number>
+                 <number>9</number>
                 </property>
                 <item row="0" column="2">
                  <widget class="QPushButton" name="startLocalCalibrationButton">
@@ -822,6 +862,42 @@
                   </property>
                   <property name="value">
                    <number>0</number>
+                  </property>
+                 </widget>
+                </item>
+                <item row="3" column="3">
+                 <widget class="QPushButton" name="startLocalTestButton">
+                  <property name="text">
+                   <string>  Start Test</string>
+                  </property>
+                  <property name="icon">
+                   <iconset theme="forward">
+                    <normaloff/>
+                   </iconset>
+                  </property>
+                 </widget>
+                </item>
+                <item row="3" column="4">
+                 <widget class="QPushButton" name="continueLocalTestButton">
+                  <property name="text">
+                   <string>   Continue</string>
+                  </property>
+                  <property name="icon">
+                   <iconset theme="forward">
+                    <normaloff/>
+                   </iconset>
+                  </property>
+                 </widget>
+                </item>
+                <item row="3" column="5">
+                 <widget class="QPushButton" name="stopLocalTestButton">
+                  <property name="text">
+                   <string>   Stop Test</string>
+                  </property>
+                  <property name="icon">
+                   <iconset theme="media-playback-stop">
+                    <normaloff/>
+                   </iconset>
                   </property>
                  </widget>
                 </item>

@@ -71,12 +71,8 @@
 #include <oni_vicon_recorder/ChangeDepthSensorModeAction.h>
 #include <oni_vicon_recorder/ConnectToViconAction.h>
 #include <depth_sensor_vicon_calibration/GlobalCalibrationAction.h>
-#include <depth_sensor_vicon_calibration/ContinueGlobalCalibrationAction.h>
-#include <depth_sensor_vicon_calibration/CompleteGlobalCalibrationAction.h>
 
 #include <depth_sensor_vicon_calibration/LocalCalibrationAction.h>
-#include <depth_sensor_vicon_calibration/ContinueLocalCalibrationAction.h>
-#include <depth_sensor_vicon_calibration/CompleteLocalCalibrationAction.h>
 
 #include <ros_action_helper/action_helper.hpp>
 
@@ -99,11 +95,11 @@ namespace rqt_acquisition_controller
     ACTION_IMPLEMENT_CLIENT(oni_vicon_recorder, ConnectToVicon)
     ACTION_IMPLEMENT_CLIENT(oni_vicon_recorder, ChangeDepthSensorMode)
     ACTION_IMPLEMENT_CLIENT(depth_sensor_vicon_calibration, GlobalCalibration)
-    ACTION_IMPLEMENT_CLIENT(depth_sensor_vicon_calibration, ContinueGlobalCalibration)
-    ACTION_IMPLEMENT_CLIENT(depth_sensor_vicon_calibration, CompleteGlobalCalibration)
+    //ACTION_IMPLEMENT_CLIENT(depth_sensor_vicon_calibration, ContinueGlobalCalibration)
+    //ACTION_IMPLEMENT_CLIENT(depth_sensor_vicon_calibration, CompleteGlobalCalibration)
     ACTION_IMPLEMENT_CLIENT(depth_sensor_vicon_calibration, LocalCalibration)
-    ACTION_IMPLEMENT_CLIENT(depth_sensor_vicon_calibration, ContinueLocalCalibration)
-    ACTION_IMPLEMENT_CLIENT(depth_sensor_vicon_calibration, CompleteLocalCalibration)
+    //ACTION_IMPLEMENT_CLIENT(depth_sensor_vicon_calibration, ContinueLocalCalibration)
+    //ACTION_IMPLEMENT_CLIENT(depth_sensor_vicon_calibration, CompleteLocalCalibration)
 
     public:
         struct StatusItem

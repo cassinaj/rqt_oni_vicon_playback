@@ -24,11 +24,7 @@ add_action_files(
     DIRECTORY action
     FILES
     GlobalCalibration.action
-    ContinueGlobalCalibration.action
-    CompleteGlobalCalibration.action
     LocalCalibration.action
-    ContinueLocalCalibration.action
-    CompleteLocalCalibration.action
     TestCalibration.action
 )
 
@@ -39,6 +35,10 @@ add_service_files(
     LoadLocalCalibration.srv
     SaveGlobalCalibration.srv
     SaveLocalCalibration.srv
+    ContinueLocalCalibration.srv
+    CompleteLocalCalibration.srv
+    ContinueGlobalCalibration.srv
+    CompleteGlobalCalibration.srv
 )
 
 generate_messages(

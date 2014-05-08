@@ -165,7 +165,7 @@ Calibration::Calibration(ros::NodeHandle& node_handle,
 
     continue_test_calibration_srv_= node_handle.advertiseService(
                 ContinueTestCalibration::Request::SERVICE_NAME,
-                &Calibration::continueTestCalibrationCB,
+                &Calibration::continue,
                 this);
 
     global_calibration_transform_.setIdentity();

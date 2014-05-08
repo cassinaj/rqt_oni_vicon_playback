@@ -95,12 +95,8 @@ namespace rqt_acquisition_controller
     ACTION_IMPLEMENT_CLIENT(oni_vicon_recorder, ConnectToVicon)
     ACTION_IMPLEMENT_CLIENT(oni_vicon_recorder, ChangeDepthSensorMode)
     ACTION_IMPLEMENT_CLIENT(depth_sensor_vicon_calibration, GlobalCalibration)
-    //ACTION_IMPLEMENT_CLIENT(depth_sensor_vicon_calibration, ContinueGlobalCalibration)
-    //ACTION_IMPLEMENT_CLIENT(depth_sensor_vicon_calibration, CompleteGlobalCalibration)
     ACTION_IMPLEMENT_CLIENT(depth_sensor_vicon_calibration, LocalCalibration)
     ACTION_IMPLEMENT_CLIENT(depth_sensor_vicon_calibration, TestCalibration)
-    //ACTION_IMPLEMENT_CLIENT(depth_sensor_vicon_calibration, ContinueLocalCalibration)
-    //ACTION_IMPLEMENT_CLIENT(depth_sensor_vicon_calibration, CompleteLocalCalibration)
 
     public:
         struct StatusItem

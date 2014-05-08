@@ -93,11 +93,7 @@ AcquisitionController::AcquisitionController():
     ACTION_INIT(oni_vicon_recorder, ChangeDepthSensorMode),
     ACTION_INIT(oni_vicon_recorder, ConnectToVicon),
     ACTION_INIT(depth_sensor_vicon_calibration, GlobalCalibration),
-    //ACTION_INIT(depth_sensor_vicon_calibration, ContinueGlobalCalibration),
-    //ACTION_INIT(depth_sensor_vicon_calibration, CompleteGlobalCalibration),
     ACTION_INIT(depth_sensor_vicon_calibration, LocalCalibration),
-    //ACTION_INIT(depth_sensor_vicon_calibration, ContinueLocalCalibration),
-    //ACTION_INIT(depth_sensor_vicon_calibration, CompleteLocalCalibration)
     ACTION_INIT(depth_sensor_vicon_calibration, TestCalibration)
 {
     setObjectName("AcquisitionController");
@@ -506,13 +502,7 @@ void AcquisitionController::onGlobalCalibrationFeedback(int progress,
 }
 
 void AcquisitionController::onCompleteGlobalCalibration()
-{
-    /*
-    ACTION_SEND_GOAL(AcquisitionController,
-                     depth_sensor_vicon_calibration,
-                     CompleteGlobalCalibration);
-                     */
-
+{   
     CompleteGlobalCalibration service;
     if (ros::service::call(CompleteGlobalCalibration::Request::SERVICE_NAME, service))
     {
@@ -556,12 +546,6 @@ void AcquisitionController::onContinueLocalCalibration()
 {
     if (!isActive("local-calibration-continued"))
     {                
-        /*
-        ACTION_SEND_GOAL(AcquisitionController,
-                         depth_sensor_vicon_calibration,
-                         ContinueLocalCalibration);
-        */
-
         ContinueLocalCalibration service;
         if (ros::service::call(ContinueLocalCalibration::Request::SERVICE_NAME, service))
         {
@@ -596,12 +580,6 @@ void AcquisitionController::onLocalCalibrationFeedback(int progress,
 
 void AcquisitionController::onCompleteLocalCalibration()
 {
-    /*
-    ACTION_SEND_GOAL(AcquisitionController,
-                     depth_sensor_vicon_calibration,
-                     CompleteLocalCalibration);
-                     */
-
     CompleteLocalCalibration service;
     if (ros::service::call(CompleteLocalCalibration::Request::SERVICE_NAME, service))
     {
@@ -1248,17 +1226,6 @@ ACTION_ON_DONE(AcquisitionController, depth_sensor_vicon_calibration, GlobalCali
     setActivity("global-calibration-finished", false);
 }
 
-
-/*
-ACTION_ON_ACTIVE(AcquisitionController, depth_sensor_vicon_calibration, ContinueGlobalCalibration){}
-ACTION_ON_FEEDBACK(AcquisitionController, depth_sensor_vicon_calibration, ContinueGlobalCalibration){}
-ACTION_ON_DONE(AcquisitionController, depth_sensor_vicon_calibration, ContinueGlobalCalibration){}
-ACTION_ON_ACTIVE(AcquisitionController, depth_sensor_vicon_calibration, CompleteGlobalCalibration){}
-ACTION_ON_FEEDBACK(AcquisitionController, depth_sensor_vicon_calibration, CompleteGlobalCalibration){}
-ACTION_ON_DONE(AcquisitionController, depth_sensor_vicon_calibration, CompleteGlobalCalibration){}
-*/
-
-
 ACTION_ON_ACTIVE(AcquisitionController, depth_sensor_vicon_calibration, LocalCalibration)
 {
     ROS_INFO("Starting local calibration ...");
@@ -1294,14 +1261,33 @@ ACTION_ON_DONE(AcquisitionController, depth_sensor_vicon_calibration, LocalCalib
     setActivity("local-calibration-finished", false);
 }
 
-/*
-ACTION_ON_ACTIVE(AcquisitionController, depth_sensor_vicon_calibration, ContinueLocalCalibration){}
-ACTION_ON_FEEDBACK(AcquisitionController, depth_sensor_vicon_calibration, ContinueLocalCalibration){}
-ACTION_ON_DONE(AcquisitionController, depth_sensor_vicon_calibration, ContinueLocalCalibration){}
-ACTION_ON_ACTIVE(AcquisitionController, depth_sensor_vicon_calibration, CompleteLocalCalibration){}
-ACTION_ON_FEEDBACK(AcquisitionController, depth_sensor_vicon_calibration, CompleteLocalCalibration){}
-ACTION_ON_DONE(AcquisitionController, depth_sensor_vicon_calibration, CompleteLocalCalibration){}
-*/
+
+ACTION_ON_ACTIVE(AcquisitionController, depth_sensor_vicon_calibration, TestCalibration)
+{
+    ROS_INFO("Starting calibration testing ...");
+    setActivity("test-calibration-continued", false);
+    setActivity("test-calibration-finished", false);
+}
+
+ACTION_ON_FEEDBACK(AcquisitionController, depth_sensor_vicon_calibration, TestCalibration)
+{
+}
+
+ACTION_ON_DONE(AcquisitionController, depth_sensor_vicon_calibration, TestCalibration)
+{
+    switch (ACTION_STATE(TestCalibration).state_)
+    {
+    case actionlib::SimpleClientGoalState::SUCCEEDED:
+        ROS_INFO("Local calibration tesing done.");
+        break;
+    default:
+        ROS_INFO("Testing calibration aborted.");
+    }
+
+    setActivity("test-global-calibration-running", false);
+    setActivity("test-local-calibration-running", false);
+    setActivity("test-calibration-continued", false);
+}
 
 // ============================================================================================== //
 // == Implementation details ==================================================================== //

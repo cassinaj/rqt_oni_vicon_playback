@@ -9,7 +9,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1215</width>
+    <width>649</width>
     <height>1117</height>
    </rect>
   </property>
@@ -105,8 +105,8 @@
       <property name="geometry">
        <rect>
         <x>0</x>
-        <y>-15</y>
-        <width>1181</width>
+        <y>0</y>
+        <width>660</width>
         <height>880</height>
        </rect>
       </property>
@@ -615,7 +615,7 @@
                    </font>
                   </property>
                   <property name="text">
-                   <string>    -  Vicon - Depth Sensor World Coordinate Transformation</string>
+                   <string>    -  Vicon - Depth Sensor</string>
                   </property>
                  </widget>
                 </item>
@@ -681,7 +681,9 @@
                    <string>   Stop Test</string>
                   </property>
                   <property name="icon">
-                   <iconset theme="media-playback-stop"/>
+                   <iconset theme="media-playback-stop">
+                    <normaloff/>
+                   </iconset>
                   </property>
                  </widget>
                 </item>
@@ -691,7 +693,9 @@
                    <string>   Continue</string>
                   </property>
                   <property name="icon">
-                   <iconset theme="forward"/>
+                   <iconset theme="forward">
+                    <normaloff/>
+                   </iconset>
                   </property>
                  </widget>
                 </item>
@@ -701,7 +705,9 @@
                    <string>  Start Test</string>
                   </property>
                   <property name="icon">
-                   <iconset theme="forward"/>
+                   <iconset theme="forward">
+                    <normaloff/>
+                   </iconset>
                   </property>
                  </widget>
                 </item>
@@ -834,7 +840,7 @@
                    </font>
                   </property>
                   <property name="text">
-                   <string>    - Local Vicon - Depth Sensor Frame Coordinate Transformation</string>
+                   <string>    - Local Vicon Object Frame - Depth Sensor Object Frame</string>
                   </property>
                  </widget>
                 </item>

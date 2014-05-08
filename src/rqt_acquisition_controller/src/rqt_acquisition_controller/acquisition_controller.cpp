@@ -334,13 +334,13 @@ void AcquisitionController::onStartRecording()
     SaveGlobalCalibration save_gobal_calibration;
     save_gobal_calibration.request.destination =
             recording_destination_dir_ + "/global_calibration.txt";
-    if (ros::service::call(SaveGlobalCalibration::Request::SERVICE_NAME,
+    if (!ros::service::call(SaveGlobalCalibration::Request::SERVICE_NAME,
                            save_gobal_calibration))
     {
         ROS_ERROR("Saving global calibration %s failed.",
                   save_gobal_calibration.request.destination.c_str());
 
-        box("Saving global calibration f.ailed.", false, QMessageBox::Critical);
+        box("Saving global calibration failed.", false, QMessageBox::Critical);
         return;
     }
 
@@ -973,17 +973,11 @@ void AcquisitionController::onUpdateStatus()
         ui_.saveGlobalCalibButton->setEnabled(!isActive("global-calibration-running")
                                               && isActive("globally-calibrated"));
 
-        ui_.startGlobalTestButton->setEnabled(!isActive("global-calibration-running")
+        ui_.startGlobalTestButton->setEnabled(!isActive("test-global-calibration-running")
                                               && isActive("globally-calibrated"));
         ui_.continueGlobalTestButton->setEnabled(isActive("test-global-calibration-running")
                                                  && !isActive("test-calibration-continued"));
         ui_.stopGlobalTestButton->setEnabled(isActive("test-global-calibration-running"));
-
-        ui_.startLocalTestButton->setEnabled(!isActive("local-calibration-running")
-                                             && isActive("locally-calibrated"));
-        ui_.continueLocalTestButton->setEnabled(isActive("test-local-calibration-running")
-                                                && !isActive("test-calibration-continued"));
-        ui_.stopLocalTestButton->setEnabled(isActive("test-local-calibration-running"));
     }
 
         // local calibration
@@ -1000,6 +994,12 @@ void AcquisitionController::onUpdateStatus()
         ui_.loadLocalCalibButton->setEnabled(!isActive("local-calibration-running"));
         ui_.saveLocalCalibButton->setEnabled(!isActive("local-calibration-running")
                                              && isActive("locally-calibrated"));
+
+        ui_.startLocalTestButton->setEnabled(!isActive("test-local-calibration-running")
+                                             && isActive("locally-calibrated"));
+        ui_.continueLocalTestButton->setEnabled(isActive("test-local-calibration-running")
+                                                && !isActive("test-calibration-continued"));
+        ui_.stopLocalTestButton->setEnabled(isActive("test-local-calibration-running"));
     }
 
     // == recording == //

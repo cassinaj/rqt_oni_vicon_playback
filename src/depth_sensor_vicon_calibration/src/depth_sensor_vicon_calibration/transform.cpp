@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <boost/filesystem.hpp>
 
 using namespace depth_sensor_vicon_calibration;
 
@@ -141,6 +142,14 @@ bool Transform::saveTransform(const std::string &destination, const tf::Transfor
     tf::Quaternion orientation = transform.getRotation();
 
     std::ofstream transform_file;
+    boost::filesystem::path dir(destination);
+
+    if (!boost::filesystem::create_directories(dir.remove_filename()))
+    {
+        // ignore since it might exist already
+        // return false;
+    }
+
     transform_file.open(destination.c_str());
     transform_file << transform.getOrigin().getX()  << " "
                      << transform.getOrigin().getY()  << " "

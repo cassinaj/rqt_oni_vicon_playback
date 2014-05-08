@@ -114,8 +114,8 @@ namespace depth_sensor_vicon_calibration
                                         ContinueLocalCalibration::Response& response);
         bool completeLocalCalibrationCB(CompleteLocalCalibration::Request& request,
                                         CompleteLocalCalibration::Response& response);        
-        bool continueTestCalibrationCB(ContinueLocalCalibration::Request& request,
-                                        ContinueLocalCalibration::Response& response);
+        bool continueTestCalibrationCB(ContinueTestCalibration::Request& request,
+                                        ContinueTestCalibration::Response& response);
 
         void processGlobalCalibrationFeedback(
                 const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);

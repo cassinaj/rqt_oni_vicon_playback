@@ -121,6 +121,7 @@ Calibration::Calibration(ros::NodeHandle& node_handle,
     local_calibration_as_.start();
     //continue_local_calibration_as_.start();
     //complete_local_calibration_as_.start();
+    test_calibration_as_.start();
 
     // advertise services
     save_global_calib_srv_ = node_handle.advertiseService(
@@ -165,7 +166,7 @@ Calibration::Calibration(ros::NodeHandle& node_handle,
 
     continue_test_calibration_srv_= node_handle.advertiseService(
                 ContinueTestCalibration::Request::SERVICE_NAME,
-                &Calibration::continue,
+                &Calibration::continueTestCalibrationCB,
                 this);
 
     global_calibration_transform_.setIdentity();
@@ -191,9 +192,9 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
     // ========================================================================================== //
     // == Display interactive marker to set initial pose and wait to continue =================== //
     // ========================================================================================== //
-    interactive_markers::InteractiveMarkerServer server("calibration_object_marker");
+    interactive_markers::InteractiveMarkerServer server("calibration_marker");
     InteractiveMarker global_calib_maker = makeObjectMarker(global_calibration_object_display_,
-                                                            "global_calibration_marker");
+                                                            "calibration_marker");
     if (global_pose_set_)
     {
         global_calib_maker.pose = current_global_marker_pose_;
@@ -417,9 +418,9 @@ void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
     // ========================================================================================== //
     // == Display interactive marker to set initial pose and wait to continue =================== //
     // ========================================================================================== //
-    interactive_markers::InteractiveMarkerServer server("calibration_object_marker");
+    interactive_markers::InteractiveMarkerServer server("calibration_marker");
     InteractiveMarker local_calib_maker = makeObjectMarker(goal->calibration_object_display,
-                                                           "local_calibration_marker");
+                                                           "calibration_marker");
     if (local_pose_set_)
     {
         local_calib_maker.pose = current_local_marker_pose_;
@@ -641,9 +642,9 @@ void Calibration::testCalibration(const std::string& vicon_object_name,
     // ========================================================================================== //
     // == Display interactive marker to set initial pose and wait to continue =================== //
     // ========================================================================================== //
-    interactive_markers::InteractiveMarkerServer server("object_marker");
+    interactive_markers::InteractiveMarkerServer server("calibration_marker");
     InteractiveMarker test_object_marker = makeObjectMarker(object_display,
-                                                            "object_marker");
+                                                            "calibration_marker");
     if (test_pose_set_)
     {
         test_object_marker.pose = current_test_marker_pose_;
@@ -665,7 +666,7 @@ void Calibration::testCalibration(const std::string& vicon_object_name,
     }
 
     // ========================================================================================== //
-    // == Coninued. Check for abort and continue otherwise. Start pose estimation =============== //                                                                == //
+    // == Coninued. Check for abort and continue otherwise. Start pose estimation =============== //
     // ========================================================================================== //
     if (test_calibration_as_.isPreemptRequested())
     {
@@ -832,8 +833,8 @@ bool Calibration::completeLocalCalibrationCB(CompleteLocalCalibration::Request &
     return true;
 }
 
-bool Calibration::continueTestCalibrationCB(ContinueLocalCalibration::Request& request,
-                                            ContinueLocalCalibration::Response& response)
+bool Calibration::continueTestCalibrationCB(ContinueTestCalibration::Request& request,
+                                            ContinueTestCalibration::Response& response)
 {
     boost::unique_lock<boost::mutex> lock(test_calib_mutex_);
 

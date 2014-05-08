@@ -76,6 +76,7 @@
 #include <depth_sensor_vicon_calibration/CompleteGlobalCalibration.h>
 #include <depth_sensor_vicon_calibration/ContinueLocalCalibration.h>
 #include <depth_sensor_vicon_calibration/CompleteLocalCalibration.h>
+#include <depth_sensor_vicon_calibration/ContinueTestCalibration.h>
 #include <depth_sensor_vicon_calibration/SaveGlobalCalibration.h>
 #include <depth_sensor_vicon_calibration/LoadGlobalCalibration.h>
 #include <depth_sensor_vicon_calibration/SaveLocalCalibration.h>
@@ -112,7 +113,9 @@ namespace depth_sensor_vicon_calibration
         bool continueLocalCalibrationCB(ContinueLocalCalibration::Request& request,
                                         ContinueLocalCalibration::Response& response);
         bool completeLocalCalibrationCB(CompleteLocalCalibration::Request& request,
-                                        CompleteLocalCalibration::Response& response);
+                                        CompleteLocalCalibration::Response& response);        
+        bool continueTestCalibrationCB(ContinueLocalCalibration::Request& request,
+                                        ContinueLocalCalibration::Response& response);
 
         void processGlobalCalibrationFeedback(
                 const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
@@ -132,16 +135,13 @@ namespace depth_sensor_vicon_calibration
         bool loadLocalCalibrationCB(LoadLocalCalibration::Request& request,
                                     LoadLocalCalibration::Response& response);
 
-        void getGlobalCalibrationCB();
-        void getLocalCalibrationCB();
-
     private: /* implementation details */
         void publishGlobalStatus(const std::string& status, GlobalCalibrationFeedback& feedback);
         void publishLocalStatus(const std::string& status, LocalCalibrationFeedback& feedback);
         visualization_msgs::InteractiveMarker makeObjectMarker(const std::string& mesh_resource,
                                                                const std::string& name);
         void publishMarker(const geometry_msgs::Pose& pose,
-                           const std::string &mesh_resource,
+                           const std::string& mesh_resource,
                            const ros::Publisher& pub,
                            int marker_id = 0,
                            float r = 0,
@@ -150,9 +150,8 @@ namespace depth_sensor_vicon_calibration
                            float a = 1.0);
         void cachePose(const geometry_msgs::Pose& pose, const std::string dest);
         void loadPoseFromCache(const std::string src, geometry_msgs::Pose& pose);
-
-
-        void testCalibration(const std::string& vicon_object_name, const std::string &object,
+        void testCalibration(const std::string& vicon_object_name,
+                             const std::string& object,
                              const std::string& object_display);
 
     private:
@@ -220,6 +219,7 @@ namespace depth_sensor_vicon_calibration
         ros::ServiceServer complete_global_calibration_srv_;
         ros::ServiceServer continue_local_calibration_srv_;
         ros::ServiceServer complete_local_calibration_srv_;
+        ros::ServiceServer continue_test_calibration_srv_;
 
         ros::ServiceServer save_global_calib_srv_;
         ros::ServiceServer save_local_calib_srv_;

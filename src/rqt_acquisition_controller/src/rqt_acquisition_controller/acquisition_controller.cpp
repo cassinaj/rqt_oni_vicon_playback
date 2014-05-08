@@ -79,6 +79,7 @@
 #include <depth_sensor_vicon_calibration/CompleteLocalCalibration.h>
 #include <depth_sensor_vicon_calibration/ContinueGlobalCalibration.h>
 #include <depth_sensor_vicon_calibration/CompleteGlobalCalibration.h>
+#include <depth_sensor_vicon_calibration/ContinueTestCalibration.h>
 
 using namespace rviz;
 using namespace rqt_acquisition_controller;
@@ -94,9 +95,10 @@ AcquisitionController::AcquisitionController():
     ACTION_INIT(depth_sensor_vicon_calibration, GlobalCalibration),
     //ACTION_INIT(depth_sensor_vicon_calibration, ContinueGlobalCalibration),
     //ACTION_INIT(depth_sensor_vicon_calibration, CompleteGlobalCalibration),
-    ACTION_INIT(depth_sensor_vicon_calibration, LocalCalibration)
+    ACTION_INIT(depth_sensor_vicon_calibration, LocalCalibration),
     //ACTION_INIT(depth_sensor_vicon_calibration, ContinueLocalCalibration),
     //ACTION_INIT(depth_sensor_vicon_calibration, CompleteLocalCalibration)
+    ACTION_INIT(depth_sensor_vicon_calibration, TestCalibration)
 {
     setObjectName("AcquisitionController");
 }
@@ -178,6 +180,12 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
             this, SLOT(onContinueGlobalCalibration()));
     connect(ui_.completeGlobalCalibrationButton, SIGNAL(clicked()),
             this, SLOT(onCompleteGlobalCalibration()));
+    connect(ui_.startGlobalTestButton, SIGNAL(clicked()),
+            this, SLOT(onStartGlobalTestCalibration()));
+    connect(ui_.continueGlobalTestButton, SIGNAL(clicked()),
+            this, SLOT(onContinueTestCalibration()));
+    connect(ui_.stopGlobalTestButton, SIGNAL(clicked()),
+            this, SLOT(onStopTestCalibration()));
 
     connect(ui_.startLocalCalibrationButton, SIGNAL(clicked()),
             this, SLOT(onStartLocalCalibration()));
@@ -186,7 +194,14 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
     connect(ui_.continueLocalCalibButton, SIGNAL(clicked()),
             this, SLOT(onContinueLocalCalibration()));
     connect(ui_.completeLocalCalibrationButton, SIGNAL(clicked()),
-            this, SLOT(onCompleteLocalCalibration()));
+            this, SLOT(onCompleteLocalCalibration()));    
+    connect(ui_.startLocalTestButton, SIGNAL(clicked()),
+            this, SLOT(onStartLocalTestCalibration()));
+    connect(ui_.continueLocalTestButton, SIGNAL(clicked()),
+            this, SLOT(onContinueTestCalibration()));
+    connect(ui_.stopLocalTestButton, SIGNAL(clicked()),
+            this, SLOT(onStopTestCalibration()));
+
 
     connect(ui_.saveGlobalCalibButton, SIGNAL(clicked()), this, SLOT(onSaveGlobalCalibration()));
     connect(ui_.saveLocalCalibButton, SIGNAL(clicked()), this, SLOT(onSaveLocalCalibration()));
@@ -234,6 +249,9 @@ void AcquisitionController::initPlugin(qt_gui_cpp::PluginContext& context)
     setActivity("local-calibration-continued", false);
     setActivity("local-calibration-finished", false);
     setActivity("locally-calibrated", false);
+    setActivity("test-local-calibration-running", false);
+    setActivity("test-global-calibration-running", false);
+    setActivity("test-calibration-continued", false);
     setActivity("recording", false);
     setActivity("global-action-pending", false);
 
@@ -255,6 +273,7 @@ void AcquisitionController::shutdownPlugin()
     ACTION_SHUTDOWN(ConnectToVicon, isActive("vicon-connected"));
     ACTION_SHUTDOWN(GlobalCalibration, isActive("global-calibration-running"));
     ACTION_SHUTDOWN(LocalCalibration, isActive("local-calibration-running"));
+    ACTION_SHUTDOWN(TestCalibration, isActive("test-calibration-running"));
 }
 
 void AcquisitionController::saveSettings(qt_gui_cpp::Settings& plugin_settings,
@@ -386,6 +405,12 @@ void AcquisitionController::onStopAll()
     if (isActive("local-calibration-running"))
     {
         ACTION(LocalCalibration).waitForResult(ros::Duration(0.5));
+    }
+
+    onStopTestCalibration();
+    if (isActive("test-calibration-running"))
+    {
+        ACTION(TestCalibration).waitForResult(ros::Duration(0.5));
     }
 }
 
@@ -586,6 +611,67 @@ void AcquisitionController::onCompleteLocalCalibration()
     {
         ROS_ERROR("Completing local calibration failed. Is the calibration node still running?");
     }
+}
+
+void AcquisitionController::onStartGlobalTestCalibration()
+{
+    if (!isActive("test-global-calibration-running"))
+    {
+        setActivity("test-global-calibration-running", true);
+        setActivity("test-calibration-continued", false);
+
+        ACTION_GOAL(TestCalibration).test_what = TestCalibrationGoal::GLOBAL_CALIBRATION;
+        ACTION_SEND_GOAL(AcquisitionController,
+                         depth_sensor_vicon_calibration,
+                         TestCalibration);
+    }
+}
+
+void AcquisitionController::onStartLocalTestCalibration()
+{
+    if (!isActive("test-local-calibration-running"))
+    {
+        setActivity("test-local-calibration-running", true);
+        setActivity("test-calibration-continued", false);
+
+        ACTION_GOAL(TestCalibration).test_what = TestCalibrationGoal::LOCAL_CALIBRATION;
+        ACTION_GOAL(TestCalibration).calibration_object_name
+                = ui_.viconObjectsComboBox->currentText().toStdString();
+        ACTION_GOAL(TestCalibration).calibration_object = object_model_tracking_file_;
+        ACTION_GOAL(TestCalibration).calibration_object_display = object_model_display_file_;
+
+        ACTION_SEND_GOAL(AcquisitionController,
+                         depth_sensor_vicon_calibration,
+                         TestCalibration);
+    }
+}
+
+void AcquisitionController::onContinueTestCalibration()
+{
+    if (!isActive("test-calibration-continued"))
+    {
+        ContinueTestCalibration service;
+        if (ros::service::call(ContinueTestCalibration::Request::SERVICE_NAME, service))
+        {
+            ROS_INFO("Continue test calibration ...");
+            setActivity("test-calibration-continued", true);
+        }
+        else
+        {
+            ROS_ERROR("Continuing test calibration failed. "\
+                      "Is the calibration node still running?");
+        }
+    }
+}
+
+void AcquisitionController::onStopTestCalibration()
+{
+    ACTION(TestCalibration).cancelAllGoals();
+    setActivity("test-global-calibration-running", false);
+    setActivity("test-local-calibration-running", false);
+    setActivity("test-calibration-continued", false);
+
+    ROS_INFO("Calibration testing stopped.");
 }
 
 void AcquisitionController::onSaveGlobalCalibration()
@@ -809,7 +895,9 @@ void AcquisitionController::onUpdateStatus()
     bool recorder_node_online = ACTION(Record).isServerConnected();
 
     bool calibrating = isActive("global-calibration-running")
-                       || isActive("local-calibration-running");
+                       || isActive("local-calibration-running")
+                       || isActive("test-global-calibration-running")
+                       || isActive("test-local-calibration-running");
 
     // fallback if any sensor is not running anymore
     setActivity("settings-applied", isActive("settings-applied") && isActive("depth-sensor-running")
@@ -906,6 +994,18 @@ void AcquisitionController::onUpdateStatus()
         ui_.loadGlobalCalibButton->setEnabled(!isActive("global-calibration-running"));
         ui_.saveGlobalCalibButton->setEnabled(!isActive("global-calibration-running")
                                               && isActive("globally-calibrated"));
+
+        ui_.startGlobalTestButton->setEnabled(!isActive("global-calibration-running")
+                                              && isActive("globally-calibrated"));
+        ui_.continueGlobalTestButton->setEnabled(isActive("test-global-calibration-running")
+                                                 && !isActive("test-calibration-continued"));
+        ui_.stopGlobalTestButton->setEnabled(isActive("test-global-calibration-running"));
+
+        ui_.startLocalTestButton->setEnabled(!isActive("local-calibration-running")
+                                             && isActive("locally-calibrated"));
+        ui_.continueLocalTestButton->setEnabled(isActive("test-local-calibration-running")
+                                                && !isActive("test-calibration-continued"));
+        ui_.stopLocalTestButton->setEnabled(isActive("test-local-calibration-running"));
     }
 
         // local calibration

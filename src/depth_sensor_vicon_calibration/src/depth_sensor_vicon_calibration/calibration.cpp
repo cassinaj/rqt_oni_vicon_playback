@@ -145,22 +145,27 @@ Calibration::Calibration(ros::NodeHandle& node_handle,
 
     continue_global_calibration_srv_= node_handle.advertiseService(
                 ContinueGlobalCalibration::Request::SERVICE_NAME,
-                &Calibration::loadLocalCalibrationCB,
+                &Calibration::continueGlobalCalibrationCB,
                 this);
 
     complete_global_calibration_srv_= node_handle.advertiseService(
                 CompleteGlobalCalibration::Request::SERVICE_NAME,
-                &Calibration::loadLocalCalibrationCB,
+                &Calibration::completeGlobalCalibrationCB,
                 this);
 
     continue_local_calibration_srv_= node_handle.advertiseService(
                 ContinueLocalCalibration::Request::SERVICE_NAME,
-                &Calibration::loadLocalCalibrationCB,
+                &Calibration::continueLocalCalibrationCB,
                 this);
 
     complete_local_calibration_srv_= node_handle.advertiseService(
                 CompleteLocalCalibration::Request::SERVICE_NAME,
-                &Calibration::loadLocalCalibrationCB,
+                &Calibration::completeLocalCalibrationCB,
+                this);
+
+    continue_test_calibration_srv_= node_handle.advertiseService(
+                ContinueTestCalibration::Request::SERVICE_NAME,
+                &Calibration::continueTestCalibrationCB,
                 this);
 
     global_calibration_transform_.setIdentity();
@@ -827,7 +832,17 @@ bool Calibration::completeLocalCalibrationCB(CompleteLocalCalibration::Request &
     return true;
 }
 
+bool Calibration::continueTestCalibrationCB(ContinueLocalCalibration::Request& request,
+                                            ContinueLocalCalibration::Response& response)
+{
+    boost::unique_lock<boost::mutex> lock(test_calib_mutex_);
 
+    ROS_INFO("Testing calibration continued");
+
+    test_calib_cond_.notify_all();
+
+    return true;
+}
 
 bool Calibration::saveGlobalCalibrationCB(SaveGlobalCalibration::Request& request,
                                           SaveGlobalCalibration::Response& response)

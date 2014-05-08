@@ -39,6 +39,7 @@ add_service_files(
     CompleteLocalCalibration.srv
     ContinueGlobalCalibration.srv
     CompleteGlobalCalibration.srv
+    ContinueTestCalibration.srv
 )
 
 generate_messages(

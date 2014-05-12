@@ -73,12 +73,12 @@ set(headers
 add_library(depth_sensor_vicon_calibration
    src/${PROJECT_NAME}/calibration.cpp
    src/${PROJECT_NAME}/transform.cpp
-   ${headers}
 )
 
 target_link_libraries(depth_sensor_vicon_calibration
   ${catkin_LIBRARIES}
   ${Boost_LIBRARIES}
+  yaml-cpp
 )
 #############
 ## Install ##

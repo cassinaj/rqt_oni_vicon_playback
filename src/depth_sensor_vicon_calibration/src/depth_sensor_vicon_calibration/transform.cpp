@@ -86,19 +86,19 @@ void CalibrationTransform::globalCalibrationFrom(const YAML::Node& doc)
 
 void CalibrationTransform::localCalibrationTo(YAML::Emitter& doc)
 {
-    doc << YAML::Key << "local_calibration" << YAML::Value;
-    doc    << YAML::BeginMap;
-    doc    << YAML::Key << "vicon_local_to_object_local_frame" << YAML::Value << local_transform_;
-    doc    << YAML::EndMap;
+    doc << YAML::Key << "local_calibration" << YAML::Value
+           << YAML::BeginMap
+           << YAML::Key << "vicon_local_to_object_local_frame" << YAML::Value << local_transform_
+           << YAML::EndMap;
 }
 
 void CalibrationTransform::globalCalibrationTo(YAML::Emitter& doc)
 {
-    doc << YAML::Key << "global_calibration" << YAML::Value;
-    doc    << YAML::BeginMap;
-    doc    << YAML::Key << "camera_intrinsics" << YAML::Value << camera_intrinsics_;
-    doc    << YAML::Key << "vicon_global_frame" << YAML::Value << global_transform_;
-    doc    << YAML::EndMap;
+    doc << YAML::Key << "global_calibration" << YAML::Value
+           << YAML::BeginMap
+           << YAML::Key << "camera_intrinsics" << YAML::Value << camera_intrinsics_
+           << YAML::Key << "vicon_global_frame" << YAML::Value << global_transform_
+           << YAML::EndMap;
 }
 
 tf::Transform CalibrationTransform::globalTransform() const
@@ -229,7 +229,9 @@ bool CalibrationTransform::saveGlobalCalibration(const std::string& destination)
     doc.SetIndent(2);
     try
     {
+        doc << YAML::BeginMap;
         globalCalibrationTo(doc);
+        doc << YAML::EndMap;
     }
     catch(...)
     {
@@ -245,7 +247,9 @@ bool CalibrationTransform::saveLocalCalibration(const std::string &destination)
     doc.SetIndent(2);
     try
     {
+        doc << YAML::BeginMap;
         localCalibrationTo(doc);
+        doc << YAML::EndMap;
     }
     catch(...)
     {
@@ -301,7 +305,7 @@ bool CalibrationTransform::saveCalibration(const std::string& destination, const
     calibration_file.open(destination.c_str());
     if (calibration_file.is_open())
     {
-
+        ROS_INFO("Saving calibration\n%s", doc.c_str());
         calibration_file << doc.c_str();
         calibration_file.close();
         return true;

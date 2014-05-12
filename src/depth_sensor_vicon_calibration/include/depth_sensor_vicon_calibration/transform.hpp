@@ -156,7 +156,7 @@ namespace depth_sensor_vicon_calibration
         tf::Vector3 origin;
         tf::Quaternion rotation;
         node["origin"] >> origin;
-        node["rotation"] >> rotation;
+        node["orientation"] >> rotation;
         transform.setOrigin(origin);
         transform.setRotation(rotation);
     }

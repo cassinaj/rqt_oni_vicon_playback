@@ -333,7 +333,7 @@ void AcquisitionController::onStartRecording()
 
     SaveGlobalCalibration save_gobal_calibration;
     save_gobal_calibration.request.destination =
-            recording_destination_dir_ + "/global_calibration.txt";
+            recording_destination_dir_ + "/global_calibration.yaml";
     if (!ros::service::call(SaveGlobalCalibration::Request::SERVICE_NAME,
                            save_gobal_calibration))
     {
@@ -346,7 +346,7 @@ void AcquisitionController::onStartRecording()
 
     SaveLocalCalibration save_local_calibration;
     save_local_calibration.request.destination =
-            recording_destination_dir_ + "/local_calibration.txt";
+            recording_destination_dir_ + "/local_calibration.yaml";
     if (!ros::service::call(SaveLocalCalibration::Request::SERVICE_NAME,
                            save_local_calibration))
     {
@@ -657,7 +657,7 @@ void AcquisitionController::onSaveGlobalCalibration()
     QString dir = QFileDialog::getSaveFileName(
                     widget_,
                     "Save global calibration",
-                    (recording_destination_dir_ + "/global_calibration.txt").c_str());
+                    (recording_destination_dir_ + "/global_calibration.yaml").c_str());
 
     if (!dir.isEmpty())
     {
@@ -680,7 +680,7 @@ void AcquisitionController::onSaveLocalCalibration()
     QString dir = QFileDialog::getSaveFileName(
                     widget_,
                     "Save local calibration",
-                    (recording_destination_dir_ + "/local_calibration.txt").c_str());
+                    (recording_destination_dir_ + "/local_calibration.yaml").c_str());
 
     if (!dir.isEmpty())
     {
@@ -703,7 +703,7 @@ void AcquisitionController::onLoadGlobalCalibration()
     QString dir = QFileDialog::getOpenFileName(
                     widget_,
                     "Load global calibration",
-                    (recording_destination_dir_ + "/global_calibration.txt").c_str());
+                    (recording_destination_dir_ + "/global_calibration.yaml").c_str());
 
     if (!dir.isEmpty())
     {
@@ -728,7 +728,7 @@ void AcquisitionController::onLoadLocalCalibration()
     QString dir = QFileDialog::getOpenFileName(
                     widget_,
                     "Save local calibration",
-                    (recording_destination_dir_ + "/local_calibration.txt").c_str());
+                    (recording_destination_dir_ + "/local_calibration.yaml").c_str());
 
     if (!dir.isEmpty())
     {

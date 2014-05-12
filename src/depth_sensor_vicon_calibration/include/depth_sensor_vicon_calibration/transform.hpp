@@ -89,13 +89,13 @@ namespace depth_sensor_vicon_calibration
         void localCalibrationFrom(const YAML::Node& doc);
         void globalCalibrationFrom(const YAML::Node& doc);
 
-        void localCalibrationTo(YAML::Emitter &doc);
-        void globalCalibrationTo(YAML::Emitter &doc);
+        void localCalibrationTo(YAML::Emitter &doc) const;
+        void globalCalibrationTo(YAML::Emitter &doc) const;
 
-        bool saveGlobalCalibration(const std::string& destination);
+        bool saveGlobalCalibration(const std::string& destination) const;
         bool loadGlobalCalibration(const std::string& source);
 
-        bool saveLocalCalibration(const std::string& destination);        
+        bool saveLocalCalibration(const std::string& destination) const;
         bool loadLocalCalibration(const std::string& source);
 
     public:
@@ -113,7 +113,7 @@ namespace depth_sensor_vicon_calibration
         static sensor_msgs::CameraInfoPtr toCameraInfo(const CameraIntrinsics& camera_intrinsics);
 
     private:
-        bool saveCalibration(const std::string &destination, const YAML::Emitter &doc);
+        bool saveCalibration(const std::string &destination, const YAML::Emitter &doc) const;
         void loadCalibrationDoc(const std::string &source, YAML::Node &doc);
         bool loadCalibration(const std::string& source, const YAML::Node &doc);
 

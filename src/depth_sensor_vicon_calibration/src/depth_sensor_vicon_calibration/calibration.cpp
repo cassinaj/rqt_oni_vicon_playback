@@ -62,10 +62,10 @@ using namespace oni_vicon_recorder;
 Calibration::Calibration(ros::NodeHandle& node_handle,
                          int global_calibration_iterations,
                          int local_calibration_iterations,
-                         std::string global_calibration_object_name,
-                         std::string global_calibration_object,
-                         std::string global_calibration_object_display,
-                         std::string camera_info_topic):
+                         const std::string &global_calibration_object_name,
+                         const std::string &global_calibration_object,
+                         const std::string &global_calibration_object_display,
+                         const std::string &camera_info_topic):
     node_handle_(node_handle),
     global_calibration_iterations_(global_calibration_iterations),
     local_calibration_iterations_(local_calibration_iterations),
@@ -921,7 +921,7 @@ void Calibration::publishMarker(const geometry_msgs::Pose& pose,
                                 float r,
                                 float g,
                                 float b,
-                                float a)
+                                float a) const
 {
     visualization_msgs::Marker marker;
     marker.header.frame_id =  "/XTION_RGB";
@@ -944,7 +944,7 @@ void Calibration::publishMarker(const geometry_msgs::Pose& pose,
     pub.publish(marker);
 }
 
-void Calibration::cachePose(const geometry_msgs::Pose& pose, const std::string dest)
+void Calibration::cachePose(const geometry_msgs::Pose& pose, const std::string dest) const
 {
     std::ofstream pose_tmp_file;
     std::string cache_file = "/tmp/pose_cache_";    
@@ -959,7 +959,7 @@ void Calibration::cachePose(const geometry_msgs::Pose& pose, const std::string d
     pose_tmp_file.close();
 }
 
-void Calibration::loadPoseFromCache(const std::string src, geometry_msgs::Pose& pose)
+void Calibration::loadPoseFromCache(const std::string src, geometry_msgs::Pose& pose) const
 {
     std::ifstream pose_tmp_file;
     std::string cache_file = "/tmp/pose_cache_";

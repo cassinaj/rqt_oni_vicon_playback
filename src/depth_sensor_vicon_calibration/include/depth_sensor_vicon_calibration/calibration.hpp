@@ -95,9 +95,10 @@ namespace depth_sensor_vicon_calibration
         Calibration(ros::NodeHandle& node_handle,
                     int global_calibration_iterations,
                     int local_calibration_iterations,
-                    std::string global_calibration_object_name,
-                    std::string global_calibration_object,
-                    std::string global_calibration_object_display, std::string camera_info_topic);
+                    const std::string& global_calibration_object_name,
+                    const std::string& global_calibration_object,
+                    const std::string& global_calibration_object_display,
+                    const std::string& camera_info_topic);
         ~Calibration();
     public: /* actions */
         void globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal);        
@@ -144,9 +145,9 @@ namespace depth_sensor_vicon_calibration
                            float r = 0,
                            float g = 1,
                            float b = 0,
-                           float a = 1.0);
-        void cachePose(const geometry_msgs::Pose& pose, const std::string dest);
-        void loadPoseFromCache(const std::string src, geometry_msgs::Pose& pose);
+                           float a = 1.0) const;
+        void cachePose(const geometry_msgs::Pose& pose, const std::string dest) const;
+        void loadPoseFromCache(const std::string src, geometry_msgs::Pose& pose) const;
         void testCalibration(const std::string& vicon_object_name,
                              const std::string& object,
                              const std::string& object_display);

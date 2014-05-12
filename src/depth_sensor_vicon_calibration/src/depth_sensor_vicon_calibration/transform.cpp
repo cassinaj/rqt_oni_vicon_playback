@@ -84,7 +84,7 @@ void CalibrationTransform::globalCalibrationFrom(const YAML::Node& doc)
     camera_intrinsics >> camera_intrinsics_;
 }
 
-void CalibrationTransform::localCalibrationTo(YAML::Emitter& doc)
+void CalibrationTransform::localCalibrationTo(YAML::Emitter& doc) const
 {
     doc << YAML::Key << "local_calibration" << YAML::Value
            << YAML::BeginMap
@@ -92,7 +92,7 @@ void CalibrationTransform::localCalibrationTo(YAML::Emitter& doc)
            << YAML::EndMap;
 }
 
-void CalibrationTransform::globalCalibrationTo(YAML::Emitter& doc)
+void CalibrationTransform::globalCalibrationTo(YAML::Emitter& doc) const
 {
     doc << YAML::Key << "global_calibration" << YAML::Value
            << YAML::BeginMap
@@ -162,7 +162,6 @@ void CalibrationTransform::toCameraInfo(
     msg_camera_info->height          = ;
     */
 
-
   #if ROS_VERSION_MINIMUM(1, 3, 0)
     msg_camera_info->D = std::vector<double>(5, 0.0);
     msg_camera_info->distortion_model = sensor_msgs::distortion_models::PLUMB_BOB;
@@ -223,7 +222,7 @@ sensor_msgs::CameraInfoPtr CalibrationTransform::toCameraInfo(
     return msg_camera_info;
 }
 
-bool CalibrationTransform::saveGlobalCalibration(const std::string& destination)
+bool CalibrationTransform::saveGlobalCalibration(const std::string& destination) const
 {
     YAML::Emitter doc;
     doc.SetIndent(2);
@@ -241,7 +240,7 @@ bool CalibrationTransform::saveGlobalCalibration(const std::string& destination)
     return saveCalibration(destination, doc);
 }
 
-bool CalibrationTransform::saveLocalCalibration(const std::string &destination)
+bool CalibrationTransform::saveLocalCalibration(const std::string &destination) const
 {
     YAML::Emitter doc;
     doc.SetIndent(2);
@@ -291,7 +290,7 @@ bool CalibrationTransform::loadLocalCalibration(const std::string &source)
     return true;
 }
 
-bool CalibrationTransform::saveCalibration(const std::string& destination, const YAML::Emitter& doc)
+bool CalibrationTransform::saveCalibration(const std::string& destination, const YAML::Emitter& doc) const
 {
     std::ofstream calibration_file;
     boost::filesystem::path dir(destination);

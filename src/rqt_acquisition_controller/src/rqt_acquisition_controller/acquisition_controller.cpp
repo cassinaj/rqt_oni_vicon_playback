@@ -69,6 +69,7 @@
 #include <QThread>
 #include <QBrush>
 #include <QPainter>
+#include <QPixmap>
 
 // services
 #include <depth_sensor_vicon_calibration/SaveGlobalCalibration.h>

@@ -64,12 +64,18 @@
 #include <actionlib/client/simple_action_client.h>
 #include <ros_action_helper/action_helper.hpp>
 
+#include <oni_vicon_player/OpenAction.h>
+#include <oni_vicon_player/PlayAction.h>
+
 namespace rqt_playback_controller
 {
     class PlaybackController:
         public rqt_gui_cpp::Plugin
     {
     Q_OBJECT
+
+    ACTION_IMPLEMENT_CLIENT(oni_vicon_player, Open)
+    ACTION_IMPLEMENT_CLIENT(oni_vicon_player, Play)
 
     public:
         struct StatusItem
@@ -95,8 +101,28 @@ namespace rqt_playback_controller
                                      const qt_gui_cpp::Settings& instance_settings);
 
     private slots:
+        void onOpen();
+        void onClose();
+        void onPlay();
+        void onStop();
+        void onSelectRecordingDirectory();
+        void onUpdateStatus();
+        void onUpdateOpeningProgress(int progress,
+                                     int progress_max,
+                                     double total_time,
+                                     int total_vicon_frames,
+                                     int total_depth_sensor_frames);
+        void onUpdatePlayback(double time, int vicon_frame, int depth_sensor_frame);
+        void onSilderMoved(int frame);
+
 
     signals:
+        void updateOpeningProgress(int progress,
+                                   int progress_max,
+                                   double total_time,
+                                   int total_vicon_frames,
+                                   int total_depth_sensor_frames);
+        void updatePlayback(double time, int vicon_frame, int depth_sensor_frame);
 
     private: /* implementation details */               
         bool box(QString message, bool rval = false, QMessageBox::Icon type = QMessageBox::Warning);
@@ -109,6 +135,8 @@ namespace rqt_playback_controller
 
         void setActivity(std::string section_name, bool active);
         bool isActive(std::string section_name);
+
+        bool validateRecordingDirectory(const std::string &dir);
 
     private:
         ros::NodeHandle node_handle_;

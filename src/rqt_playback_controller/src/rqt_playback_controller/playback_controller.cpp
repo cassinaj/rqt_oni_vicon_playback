@@ -46,15 +46,15 @@
 
 #include "rqt_playback_controller/playback_controller.hpp"
 
+// boost
 #include <boost/filesystem.hpp>
 
+// C++/STD
 #include <iostream>
 #include <sstream>
 #include <cstdlib>
 
-#include <pluginlib/class_list_macros.h>
-#include <ros/package.h>
-
+// QT
 #include <QString>
 #include <QStringList>
 #include <QList>
@@ -64,14 +64,22 @@
 #include <QThread>
 #include <QBrush>
 #include <QPainter>
+#include <QPixmap>
 
+// ros
+#include <pluginlib/class_list_macros.h>
+#include <ros/package.h>
 #include <rviz/load_resource.h>
+
+
 using namespace rviz;
 using namespace rqt_playback_controller;
 
 PlaybackController::PlaybackController():
     rqt_gui_cpp::Plugin(),
-    widget_(0)
+    widget_(0),
+    ACTION_INIT(oni_vicon_player, Open),
+    ACTION_INIT(oni_vicon_player, Play)
 {
     setObjectName("PlaybackController");
 }
@@ -92,14 +100,14 @@ void PlaybackController::initPlugin(qt_gui_cpp::PluginContext& context)
     status_model_ = new QStandardItemModel(widget_);
     statusTreeRoot(status_model_->invisibleRootItem())
         .appendRow(createStatusRow("Player", "disconnected")
-            .appendRow(createStatusRow("Recording", " - ")
+            .appendRow(createStatusRow("Current Record", " - ")
                 .appendRow(createStatusRow("Duration", "0 s"))
                 .appendRow(createStatusRow("Vicon Frames", "0"))
                 .appendRow(createStatusRow("Depth Sensor Frames", "0")))
             .appendRow(createStatusRow("Current Time", "0 s"))
             .appendRow(createStatusRow("Current Vicon Frame", "0"))
             .appendRow(createStatusRow("Current Depth Sensor Frames", "0"))
-            .appendRow(createStatusRow("Playback", "stopped"))
+            .appendRow(createStatusRow("Playback", "Stopped"))
          );
 
     ui_.statusTreeView->setModel(status_model_);
@@ -112,6 +120,20 @@ void PlaybackController::initPlugin(qt_gui_cpp::PluginContext& context)
 
     timer_ = new QTimer(widget_);
 
+    connect(ui_.openButton, SIGNAL(clicked()), this, SLOT(onOpen()));
+    connect(ui_.closeButton, SIGNAL(clicked()), this, SLOT(onClose()));
+    connect(ui_.playButton, SIGNAL(clicked()), this, SLOT(onPlay()));
+    connect(ui_.stopButton, SIGNAL(clicked()), this, SLOT(onStop()));
+    connect(ui_.selectButton, SIGNAL(clicked()), this, SLOT(onSelectRecordingDirectory()));
+    connect(ui_.frameSlider, SIGNAL(sliderMoved(int)), this, SLOT(onSilderMoved(int)));
+
+    connect(timer_, SIGNAL(timeout()), this, SLOT(onUpdateStatus()));
+    connect(this, SIGNAL(updateOpeningProgress(int,int,double,int,int)),
+            this, SLOT(onUpdateOpeningProgress(int,int,double,int,int)));
+
+    connect(this, SIGNAL(updatePlayback(double,int,int)),
+            this, SLOT(onUpdatePlayback(double,int,int)));
+
     // load and render icons
     QPixmap empty_map(16, 16);
     empty_map.fill(QColor(0,0,0,0));
@@ -120,12 +142,19 @@ void PlaybackController::initPlugin(qt_gui_cpp::PluginContext& context)
     warn_icon_ = QIcon(loadPixmap("package://rviz/icons/warning.png"));
     failed_icon_ = QIcon(loadPixmap("package://rviz/icons/failed_display.png"));
 
+    setActivity("open", false);
+    setActivity("opening", false);
+    setActivity("playing", false);
+
     timer_->start(40);
 }
 
 void PlaybackController::shutdownPlugin()
 {
     timer_->stop();
+
+    ACTION_SHUTDOWN(Open, isActive("open") || isActive("opening"));
+    ACTION_SHUTDOWN(Play, isActive("playing"));
 }
 
 void PlaybackController::saveSettings(qt_gui_cpp::Settings& plugin_settings,
@@ -142,10 +171,156 @@ void PlaybackController::restoreSettings(const qt_gui_cpp::Settings& plugin_sett
 // == Slots ===================================================================================== //
 // ============================================================================================== //
 
+void PlaybackController::onOpen()
+{
+    setActivity("opening", true);
+    ACTION_GOAL(Open).record_path = ui_.recordingDirLineEdit->text().toStdString();
+    ACTION_SEND_GOAL(PlaybackController, oni_vicon_player, Open);
+}
+
+void PlaybackController::onClose()
+{
+    ACTION(Open).cancelAllGoals();
+}
+
+void PlaybackController::onPlay()
+{
+    ACTION_SEND_GOAL(PlaybackController, oni_vicon_player, Play);
+}
+
+void PlaybackController::onStop()
+{
+    ACTION(Play).cancelAllGoals();
+    setActivity("playing", false);
+}
+
+void PlaybackController::onSelectRecordingDirectory()
+{
+    QString dir = QFileDialog::getExistingDirectory(
+                    widget_,
+                    "Recording Directory",
+                    "~/",
+                    QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+
+    if (!dir.isEmpty())
+    {
+        ui_.recordingDirLineEdit->setText(dir);
+    }
+}
+
+void PlaybackController::onUpdateStatus()
+{
+    bool player_node_online = ACTION(Open).isServerConnected() && ACTION(Play).isServerConnected();
+
+    statusItem("Player").status->setIcon(player_node_online ? ok_icon_ : warn_icon_);
+    statusItem("Player").status->setText(player_node_online ? "Connected" : "Disconnected");
+
+    ui_.frame->setEnabled(player_node_online);
+
+    if (!player_node_online) return;
+
+    ui_.selectDirFrame->setEnabled(!isActive("open") && !isActive("opening"));
+    ui_.controlFrame->setEnabled(isActive("open") && !isActive("playing"));
+
+    ui_.closeButton->setEnabled(isActive("open") || isActive("opening"));
+    ui_.playButton->setEnabled(isActive("open") && !isActive("playing"));
+    ui_.stopButton->setEnabled(isActive("open") && isActive("playing"));
+}
+
+void PlaybackController::onUpdateOpeningProgress(int progress,
+                                                 int progress_max,
+                                                 double total_time,
+                                                 int total_vicon_frames,
+                                                 int total_depth_sensor_frames)
+{
+    ui_.openingProgressBar->setValue(progress);
+    ui_.openingProgressBar->setMaximum(progress_max);
+
+    std::ostringstream total_time_oss;
+    total_time_oss << total_time;
+    total_time_oss << std::fixed << std::setprecision(2);
+    total_time_oss << "s";
+    statusItem("Duration").status->setText(total_time_oss.str().c_str());
+    statusItem("Vicon Frames").status->setText(QString::number(total_vicon_frames));
+    statusItem("Depth Sensor Frames").status->setText(QString::number(total_depth_sensor_frames));
+
+    ui_.frameSlider->setMaximum(total_depth_sensor_frames);
+    ui_.startingFrameSpinBox->setMaximum(total_depth_sensor_frames);
+}
+
+void PlaybackController::onUpdatePlayback(double time,
+                                          int vicon_frame,
+                                          int depth_sensor_frame)
+{
+    statusItem("Current Time").status->setText(QString().sprintf("%4.2fs", float(time)));
+    statusItem("Current Vicon Frame").status->setText(QString::number(vicon_frame));
+    statusItem("Current Depth Sensor Frames").status->setText(QString::number(depth_sensor_frame));
+    statusItem("Playback").status->setText(isActive("playing") ? "Playing": "Stopped");
+
+    ui_.frameSlider->setValue(depth_sensor_frame);
+    ui_.startingFrameSpinBox->setValue(depth_sensor_frame);
+    ui_.startingTimeSpinBox->setValue(time);
+}
+
+void PlaybackController::onSilderMoved(int frame)
+{
+    ui_.startingFrameSpinBox->setValue(frame);
+    ui_.startingTimeSpinBox->setValue(frame / 30.);
+}
+
 // ============================================================================================== //
 // == Action callbacks ========================================================================== //
 // ============================================================================================== //
 
+ACTION_ON_ACTIVE(PlaybackController, oni_vicon_player, Open)
+{
+}
+
+ACTION_ON_FEEDBACK(PlaybackController, oni_vicon_player, Open)
+{
+    setActivity("open", ACTION_FEEDBACK(Open)->open);
+    setActivity("opening", !ACTION_FEEDBACK(Open)->open);
+
+    emit updateOpeningProgress(ACTION_FEEDBACK(Open)->progress,
+                               ACTION_FEEDBACK(Open)->progress_max,
+                               ACTION_FEEDBACK(Open)->total_time,
+                               ACTION_FEEDBACK(Open)->total_vicon_frames,
+                               ACTION_FEEDBACK(Open)->total_depth_sensor_frames);
+}
+
+ACTION_ON_DONE(PlaybackController, oni_vicon_player, Open)
+{
+    setActivity("opening", false);
+    setActivity("open", false);
+
+    switch (ACTION_STATE(Open).state_)
+    {
+    case actionlib::SimpleClientGoalState::SUCCEEDED:
+        ROS_INFO("%s", ACTION_RESULT(Open)->message.c_str());
+        break;
+    default:
+        ROS_ERROR("%s", ACTION_RESULT(Open)->message.c_str());
+    }
+}
+
+ACTION_ON_ACTIVE(PlaybackController, oni_vicon_player, Play)
+{
+    ROS_INFO("Player started");
+    setActivity("playing", true);
+}
+
+ACTION_ON_FEEDBACK(PlaybackController, oni_vicon_player, Play)
+{
+    emit updatePlayback(ACTION_FEEDBACK(Play)->current_time,
+                        ACTION_FEEDBACK(Play)->current_vicon_frame,
+                        ACTION_FEEDBACK(Play)->current_depth_sensor_frame);
+}
+
+ACTION_ON_DONE(PlaybackController, oni_vicon_player, Play)
+{
+    setActivity("playing", false);
+    ROS_INFO("Player stopped");
+}
 
 // ============================================================================================== //
 // == Implementation details ==================================================================== //
@@ -206,6 +381,58 @@ bool PlaybackController::isActive(std::string section_name)
     }
 
     return activity_status_map_[section_name];
+}
+
+bool PlaybackController::validateRecordingDirectory(const std::string& dir)
+{
+    if (dir.empty())
+    {
+        return box(QString("Please select a record directory"),
+                   false,
+                   QMessageBox::Critical);
+    }
+
+    boost::filesystem::path recording_path(dir);
+    std::string file;
+
+    if (!boost::filesystem::exists(recording_path))
+    {
+        return box(QString("Directory does not exist."),
+                   false,
+                   QMessageBox::Critical);
+    }
+
+    file = recording_path.leaf().string() + ".oni";
+    if (!boost::filesystem::exists(recording_path / file))
+    {
+        return box(QString("Missing ONI depth image file: ") + file.c_str(),
+                   false,
+                   QMessageBox::Critical);
+    }
+
+    file = recording_path.leaf().string() + ".txt";
+    if (!boost::filesystem::exists(recording_path / file))
+    {
+        return box(QString("Missing vicon pose file: ") + file.c_str(),
+                   false,
+                   QMessageBox::Critical);
+    }
+
+    if (!boost::filesystem::exists(recording_path / "global_calibration.yaml"))
+    {
+        return box(QString("Missing global calibration file: global_calibration.yaml"),
+                   false,
+                   QMessageBox::Critical);
+    }
+
+    if (!boost::filesystem::exists(recording_path / "local_calibration.yaml"))
+    {
+        return box(QString("Missing global calibration file: local_calibration.yaml"),
+                   false,
+                   QMessageBox::Critical);
+    }
+
+    return true;
 }
 
 bool PlaybackController::box(QString message, bool rval, QMessageBox::Icon type)

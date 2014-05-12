@@ -9,7 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
     rviz
     ros_action_helper
     depth_sensor_vicon_calibration
-    oni_vicon_recorder)
+    oni_vicon_player)
 
 find_package(Boost REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
@@ -30,7 +30,7 @@ catkin_package(
     actionlib
     rviz
     depth_sensor_vicon_calibration
-    oni_vicon_recorder
+    oni_vicon_player
 )
 
 catkin_python_setup()

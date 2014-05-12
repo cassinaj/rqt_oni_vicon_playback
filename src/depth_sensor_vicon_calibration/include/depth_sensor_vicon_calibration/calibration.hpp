@@ -85,7 +85,6 @@
 // spkf tracker
 #include <simple_object_tracker/spkf_object_tracker.hpp>
 
-
 #include "depth_sensor_vicon_calibration/transform.hpp"
 
 namespace depth_sensor_vicon_calibration
@@ -98,7 +97,7 @@ namespace depth_sensor_vicon_calibration
                     int local_calibration_iterations,
                     std::string global_calibration_object_name,
                     std::string global_calibration_object,
-                    std::string global_calibration_object_display);
+                    std::string global_calibration_object_display, std::string camera_info_topic);
         ~Calibration();
     public: /* actions */
         void globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal);        
@@ -119,10 +118,8 @@ namespace depth_sensor_vicon_calibration
 
         void processGlobalCalibrationFeedback(
                 const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
-
         void processLocalCalibrationFeedback(
                 const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
-
         void processTestCalibrationFeedback(
                 const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
 
@@ -162,34 +159,15 @@ namespace depth_sensor_vicon_calibration
         std::string global_calibration_object_name_;
         std::string global_calibration_object_;
         std::string global_calibration_object_display_;
+        std::string camera_info_topic_;
 
-        // implementation details
         bool global_pose_set_;
         bool local_pose_set_;
         bool test_pose_set_;
 
-
-        actionlib::SimpleActionServer<GlobalCalibrationAction>
-            global_calibration_as_;
-        /*
-        actionlib::SimpleActionServer<ContinueGlobalCalibrationAction>
-            continue_global_calibration_as_;        
-        actionlib::SimpleActionServer<CompleteGlobalCalibrationAction>
-            complete_global_calibration_as_;
-        */
-
-        actionlib::SimpleActionServer<LocalCalibrationAction>
-            local_calibration_as_;
-
-        /*
-        actionlib::SimpleActionServer<ContinueLocalCalibrationAction>
-            continue_local_calibration_as_;
-        actionlib::SimpleActionServer<CompleteLocalCalibrationAction>
-            complete_local_calibration_as_;
-            */
-
-        actionlib::SimpleActionServer<TestCalibrationAction>
-            test_calibration_as_;
+        actionlib::SimpleActionServer<GlobalCalibrationAction> global_calibration_as_;
+        actionlib::SimpleActionServer<LocalCalibrationAction> local_calibration_as_;
+        actionlib::SimpleActionServer<TestCalibrationAction> test_calibration_as_;
 
         geometry_msgs::Pose current_global_marker_pose_;
         geometry_msgs::Pose current_local_marker_pose_;        
@@ -197,10 +175,7 @@ namespace depth_sensor_vicon_calibration
 
         ros::Publisher object_publisher_;
 
-        tf::Transform global_calibration_transform_;
-        tf::Transform local_calibration_transform_;
-
-        Transform calibraion_transform_;
+        CalibrationTransform calibration_transform_;
 
         bool global_calibration_complete_;
         boost::condition_variable global_calib_cond_;
@@ -221,9 +196,9 @@ namespace depth_sensor_vicon_calibration
         ros::ServiceServer complete_local_calibration_srv_;
         ros::ServiceServer continue_test_calibration_srv_;
 
-        ros::ServiceServer save_global_calib_srv_;
-        ros::ServiceServer save_local_calib_srv_;
+        ros::ServiceServer save_global_calib_srv_;        
         ros::ServiceServer load_global_calib_srv_;
+        ros::ServiceServer save_local_calib_srv_;
         ros::ServiceServer load_local_calib_srv_;        
     };
 }

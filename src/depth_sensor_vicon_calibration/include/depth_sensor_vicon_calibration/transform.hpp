@@ -48,6 +48,7 @@
 #ifndef DEPTH_SENSOR_VICON_CALIBRATION_TRANSFORM_HPP
 #define DEPTH_SENSOR_VICON_CALIBRATION_TRANSFORM_HPP
 
+#include <sensor_msgs/CameraInfo.h>
 #include <geometry_msgs/Pose.h>
 #include <tf/LinearMath/Vector3.h>
 #include <tf/LinearMath/Quaternion.h>
@@ -55,48 +56,155 @@
 #include <tf/LinearMath/Transform.h>
 #include <tf/transform_broadcaster.h>
 
+#include <yaml-cpp/yaml.h>
+
 namespace depth_sensor_vicon_calibration
 {
-    class Transform
+    class CalibrationTransform
     {
     public:
-        Transform();
-        Transform(const geometry_msgs::Pose& global_calib_transform,
+        struct CameraIntrinsics
+        {
+            double f;
+            double cx;
+            double cy;
+        };
+
+    public:
+        CalibrationTransform();
+        CalibrationTransform(const geometry_msgs::Pose& global_calib_transform,
                   const geometry_msgs::Pose& local_calib_transform);
+        virtual ~CalibrationTransform();
 
-        virtual ~Transform();
-
-        void viconToDepthSensor(const tf::Pose& vicon, tf::Transform& depth_sensor);
-        tf::Pose viconToDepthSensor(const tf::Pose& vicon);
-
-        void calibrateGlobally(const tf::Pose& vicon_reference_frame,
+        void calibrateGlobally(sensor_msgs::CameraInfoConstPtr camera_info,
+                               const tf::Pose& vicon_reference_frame,
                                const tf::Pose& depth_sensor_reference_frame);
         void calibrateLocally(const tf::Pose& vicon_reference_frame,
-                              const tf::Pose& depth_sensor_reference_frame);        
+                              const tf::Pose& depth_sensor_reference_frame);
 
-        tf::Transform getViconGlobalFrame();
+        tf::Transform globalTransform() const;
+        tf::Transform localTransform() const;
+        tf::Pose viconToDepthSensor(const tf::Pose& vicon);
+
+        void localCalibrationFrom(const YAML::Node& doc);
+        void globalCalibrationFrom(const YAML::Node& doc);
+
+        void localCalibrationTo(YAML::Emitter &doc);
+        void globalCalibrationTo(YAML::Emitter &doc);
 
         bool saveGlobalCalibration(const std::string& destination);
-        bool saveLocalCalibration(const std::string& destination);
         bool loadGlobalCalibration(const std::string& source);
+
+        bool saveLocalCalibration(const std::string& destination);        
         bool loadLocalCalibration(const std::string& source);
 
+    public:
         static void toMsgPose(const tf::Pose& tf_pose, geometry_msgs::Pose& msg_pose);
         static void toTfPose(const geometry_msgs::Pose& msg_pose, tf::Pose& tf_pose);
         static void toTfTransform(const geometry_msgs::Pose& msg_pose, tf::Transform &tf_trasnform);
-
+        static void toCameraIntrinsics(sensor_msgs::CameraInfoConstPtr msg_camera_info,
+                                       CameraIntrinsics& camera_intrinsics);
+        static void toCameraInfo(const CameraIntrinsics& camera_intrinsics,
+                                 sensor_msgs::CameraInfoPtr msg_camera_info);
         static geometry_msgs::Pose toMsgPose(const tf::Pose& tf_pose);
         static tf::Pose toTfPose(const geometry_msgs::Pose& msg_pose);
         static tf::Transform toTfTransform(const geometry_msgs::Pose& msg_pose);
+        static CameraIntrinsics toCameraIntrinsics(sensor_msgs::CameraInfoConstPtr msg_camera_info);
+        static sensor_msgs::CameraInfoPtr toCameraInfo(const CameraIntrinsics& camera_intrinsics);
 
     private:
-        bool saveTransform(const std::string& destination, const tf::Transform& transform) const;
-        bool loadTransform(const std::string& source, tf::Transform& transform);
+        bool saveCalibration(const std::string &destination, const YAML::Emitter &doc);
+        void loadCalibrationDoc(const std::string &source, YAML::Node &doc);
+        bool loadCalibration(const std::string& source, const YAML::Node &doc);
 
     private:
         tf::Transform global_transform_;
         tf::Transform local_transform_;
+        CameraIntrinsics camera_intrinsics_;
     };
+
+
+    inline void operator >>(const YAML::Node &node, tf::Vector3& translation)
+    {
+        tfScalar x, y, z;
+        node["x"] >> x;
+        node["y"] >> y;
+        node["z"] >> z;
+        translation.setValue(x, y, z);
+    }
+
+    inline void operator >>(const YAML::Node &node, tf::Quaternion &rotation)
+    {
+        tfScalar w, x, y, z;
+        node["w"] >> w;
+        node["x"] >> x;
+        node["y"] >> y;
+        node["z"] >> z;
+        rotation.setValue(x, y, z, w);
+    }
+
+    inline void operator >>(const YAML::Node& node,
+                            CalibrationTransform::CameraIntrinsics& camera_intrinsics)
+    {
+        node["f"] >> camera_intrinsics.f;
+        node["cx"] >> camera_intrinsics.cx;
+        node["cy"] >> camera_intrinsics.cy;
+    }
+
+    inline void operator >>(const YAML::Node& node, tf::Transform& transform)
+    {
+        tf::Vector3 origin;
+        tf::Quaternion rotation;
+        node["origin"] >> origin;
+        node["rotation"] >> rotation;
+        transform.setOrigin(origin);
+        transform.setRotation(rotation);
+    }
+
+    inline YAML::Emitter& operator << (YAML::Emitter& doc, const tf::Vector3& translation)
+    {
+       doc << YAML::BeginMap
+           << YAML::Key << "x" << YAML::Value << translation.getX()
+           << YAML::Key << "y" << YAML::Value << translation.getY()
+           << YAML::Key << "z" << YAML::Value << translation.getZ()
+           << YAML::EndMap;
+
+       return doc;
+    }
+
+    inline YAML::Emitter& operator << (YAML::Emitter& doc, const tf::Quaternion &rotation)
+    {
+        doc << YAML::BeginMap
+            << YAML::Key << "w" << YAML::Value << rotation.getW()
+            << YAML::Key << "x" << YAML::Value << rotation.getX()
+            << YAML::Key << "y" << YAML::Value << rotation.getY()
+            << YAML::Key << "z" << YAML::Value << rotation.getZ()
+            << YAML::EndMap;
+
+        return doc;
+    }
+
+    inline YAML::Emitter& operator << (YAML::Emitter& doc, const tf::Transform& transform)
+    {
+        doc << YAML::BeginMap
+            << YAML::Key << "origin" << YAML::Value << transform.getOrigin()
+            << YAML::Key << "orientation" << YAML::Value << transform.getRotation()
+            << YAML::EndMap;
+
+        return doc;
+    }
+
+    inline YAML::Emitter& operator << (YAML::Emitter& doc,
+                             const CalibrationTransform::CameraIntrinsics& camera_intrinsics)
+    {
+        doc << YAML::BeginMap
+            << YAML::Key << "f" << YAML::Value << camera_intrinsics.f
+            << YAML::Key << "cx" << YAML::Value << camera_intrinsics.cx
+            << YAML::Key << "cy" << YAML::Value << camera_intrinsics.cy
+            << YAML::EndMap;
+
+        return doc;
+    }
 }
 
 #endif

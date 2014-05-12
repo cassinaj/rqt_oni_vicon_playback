@@ -64,13 +64,15 @@ Calibration::Calibration(ros::NodeHandle& node_handle,
                          int local_calibration_iterations,
                          std::string global_calibration_object_name,
                          std::string global_calibration_object,
-                         std::string global_calibration_object_display):
+                         std::string global_calibration_object_display,
+                         std::string camera_info_topic):
     node_handle_(node_handle),
     global_calibration_iterations_(global_calibration_iterations),
     local_calibration_iterations_(local_calibration_iterations),
     global_calibration_object_name_(global_calibration_object_name),
     global_calibration_object_(global_calibration_object),
     global_calibration_object_display_(global_calibration_object_display),
+    camera_info_topic_(camera_info_topic),
     global_pose_set_(false),
     local_pose_set_(false),
     test_pose_set_(false),
@@ -78,30 +80,10 @@ Calibration::Calibration(ros::NodeHandle& node_handle,
                            GlobalCalibrationGoal::ACTION_NAME,
                            boost::bind(&Calibration::globalCalibrationCB, this, _1),
                            false),
-    /*
-    continue_global_calibration_as_(node_handle,
-                                    ContinueGlobalCalibrationGoal::ACTION_NAME,
-                                    boost::bind(&Calibration::continueGlobalCalibrationCB, this,_1),
-                                    false),
-    complete_global_calibration_as_(node_handle,
-                                    CompleteGlobalCalibrationGoal::ACTION_NAME,
-                                    boost::bind(&Calibration::completeGlobalCalibrationCB, this,_1),
-                                    false),
-    */
     local_calibration_as_(node_handle,
                          LocalCalibrationGoal::ACTION_NAME,
                          boost::bind(&Calibration::localCalibrationCB, this, _1),
                          false),
-    /*
-    continue_local_calibration_as_(node_handle,
-                                  ContinueLocalCalibrationGoal::ACTION_NAME,
-                                  boost::bind(&Calibration::continueLocalCalibrationCB, this, _1),
-                                  false),
-    complete_local_calibration_as_(node_handle,
-                                  CompleteLocalCalibrationGoal::ACTION_NAME,
-                                  boost::bind(&Calibration::completeLocalCalibrationCB, this, _1),
-                                  false),
-    */
     test_calibration_as_(node_handle,
                          TestCalibrationGoal::ACTION_NAME,
                          boost::bind(&Calibration::testCalibrationCB, this, _1),
@@ -115,12 +97,7 @@ Calibration::Calibration(ros::NodeHandle& node_handle,
 
     // start action servers
     global_calibration_as_.start();
-    //continue_global_calibration_as_.start();
-    //complete_global_calibration_as_.start();
-
     local_calibration_as_.start();
-    //continue_local_calibration_as_.start();
-    //complete_local_calibration_as_.start();
     test_calibration_as_.start();
 
     // advertise services
@@ -167,10 +144,7 @@ Calibration::Calibration(ros::NodeHandle& node_handle,
     continue_test_calibration_srv_= node_handle.advertiseService(
                 ContinueTestCalibration::Request::SERVICE_NAME,
                 &Calibration::continueTestCalibrationCB,
-                this);
-
-    global_calibration_transform_.setIdentity();
-    local_calibration_transform_.setIdentity();
+                this);    
 }
 
 Calibration::~Calibration()
@@ -188,6 +162,14 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
     GlobalCalibrationFeedback feedback;
 
     ROS_INFO("Global calibration started.");
+
+    // ========================================================================================== //
+    // == Get camera intrisics ================================================================== //
+    // ========================================================================================== //
+    sensor_msgs::CameraInfoConstPtr camera_info =
+            ros::topic::waitForMessage<sensor_msgs::CameraInfo>(camera_info_topic_,
+                                                                node_handle_,
+                                                                ros::Duration(2.0));
 
     // ========================================================================================== //
     // == Display interactive marker to set initial pose and wait to continue =================== //
@@ -293,9 +275,10 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
     if (ros::service::call(ViconObjectPose::Request::SERVICE_NAME, vicon_object_pose))
     {
         // calculate global transformation matrix
-        calibraion_transform_.calibrateGlobally(
-                    Transform::toTfPose(vicon_object_pose.response.object_pose),
-                    Transform::toTfPose(object_tracker.getCurrentPose()));
+        calibration_transform_.calibrateGlobally(
+                    camera_info,
+                    CalibrationTransform::toTfPose(vicon_object_pose.response.object_pose),
+                    CalibrationTransform::toTfPose(object_tracker.getCurrentPose()));
 
         feedback.finished = true;
         publishGlobalStatus("Global calibration ready.", feedback);
@@ -310,10 +293,10 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
             {
                 // vicon pose to depth sensor pose and publish marker
                 tf::Pose vicon_obj_pose =
-                        calibraion_transform_.viconToDepthSensor(
-                            Transform::toTfPose(vicon_object_pose.response.object_pose));
+                        calibration_transform_.viconToDepthSensor(
+                            CalibrationTransform::toTfPose(vicon_object_pose.response.object_pose));
 
-                publishMarker(Transform::toMsgPose(vicon_obj_pose),
+                publishMarker(CalibrationTransform::toMsgPose(vicon_obj_pose),
                               global_calibration_object_display_,
                               object_publisher_,
                               0, 1, 0);
@@ -321,7 +304,7 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
                 // publish frames
                 tf_broadcaster_.sendTransform(
                             tf::StampedTransform(
-                                Transform::toTfTransform(object_tracker.getCurrentPose()),
+                                CalibrationTransform::toTfTransform(object_tracker.getCurrentPose()),
                                 ros::Time::now(),
                                 "XTION_RGB",
                                 "ds_object_frame"));
@@ -335,7 +318,7 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
 
                 tf_broadcaster_.sendTransform(
                             tf::StampedTransform(
-                                calibraion_transform_.getViconGlobalFrame(),
+                                calibration_transform_.globalTransform(),
                                 ros::Time::now(),
                                 "XTION_RGB",
                                 "vicon_wcs"));
@@ -365,35 +348,6 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
     ROS_INFO("Global calibration done.");
     global_calibration_as_.setSucceeded(result);
 }
-
-/*
-void Calibration::continueGlobalCalibrationCB(const ContinueGlobalCalibrationGoalConstPtr& goal)
-{     
-    boost::unique_lock<boost::mutex> lock(global_calib_mutex_);
-
-    ROS_INFO("Global calibration continued");
-
-    global_calib_cond_.notify_all();
-
-    ContinueGlobalCalibrationResult result;
-    continue_global_calibration_as_.setSucceeded(result);
-}
-
-
-void Calibration::completeGlobalCalibrationCB(const CompleteGlobalCalibrationGoalConstPtr& goal)
-{
-    boost::unique_lock<boost::mutex> lock(global_calib_mutex_);
-
-    ROS_INFO("Completing global calibration ...");
-
-    global_calibration_complete_ = true;
-
-    global_calib_cond_.notify_all();
-
-    CompleteGlobalCalibrationResult result;
-    complete_global_calibration_as_.setSucceeded(result);
-}
-*/
 
 void Calibration::processGlobalCalibrationFeedback(
         const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback)
@@ -513,9 +467,9 @@ void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
     if (ros::service::call(ViconObjectPose::Request::SERVICE_NAME, vicon_object_pose))
     {
         // calculate local transformation
-        calibraion_transform_.calibrateLocally(
-                    Transform::toTfPose(vicon_object_pose.response.object_pose),
-                    Transform::toTfPose(object_tracker.getCurrentPose()));
+        calibration_transform_.calibrateLocally(
+                    CalibrationTransform::toTfPose(vicon_object_pose.response.object_pose),
+                    CalibrationTransform::toTfPose(object_tracker.getCurrentPose()));
 
         feedback.finished = true;
         publishLocalStatus("Local calibration ready.", feedback);
@@ -530,10 +484,10 @@ void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
             {
                 // vicon pose to depth sensor pose and publish marker
                 tf::Pose vicon_obj_pose =
-                        calibraion_transform_.viconToDepthSensor(
-                            Transform::toTfPose(vicon_object_pose.response.object_pose));
+                        calibration_transform_.viconToDepthSensor(
+                            CalibrationTransform::toTfPose(vicon_object_pose.response.object_pose));
 
-                publishMarker(Transform::toMsgPose(vicon_obj_pose),
+                publishMarker(CalibrationTransform::toMsgPose(vicon_obj_pose),
                               goal->calibration_object_display,
                               object_publisher_,
                               0, 1, 0);
@@ -541,7 +495,8 @@ void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
                 // set coordinates
                 tf_broadcaster_.sendTransform(
                             tf::StampedTransform(
-                                Transform::toTfTransform(object_tracker.getCurrentPose()),
+                                CalibrationTransform::toTfTransform(
+                                    object_tracker.getCurrentPose()),
                                 ros::Time::now(),
                                 "XTION_RGB",
                                 "ds_object_frame"));
@@ -555,15 +510,16 @@ void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
 
                 tf_broadcaster_.sendTransform(
                             tf::StampedTransform(
-                                calibraion_transform_.getViconGlobalFrame()
-                                    * Transform::toTfPose(vicon_object_pose.response.object_pose),
+                                calibration_transform_.globalTransform()
+                                    * CalibrationTransform::toTfPose(
+                                        vicon_object_pose.response.object_pose),
                                 ros::Time::now(),
                                 "XTION_RGB",
                                 "vicon_object_frame"));
 
                 tf_broadcaster_.sendTransform(
                             tf::StampedTransform(
-                                calibraion_transform_.getViconGlobalFrame(),
+                                calibration_transform_.globalTransform(),
                                 ros::Time::now(),
                                 "XTION_RGB",
                                 "vicon_wcs"));
@@ -593,34 +549,6 @@ void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
     ROS_INFO("Local calibration done.");
     local_calibration_as_.setSucceeded(result);
 }
-
-/*
-void Calibration::continueLocalCalibrationCB(const ContinueLocalCalibrationGoalConstPtr& goal)
-{
-    boost::unique_lock<boost::mutex> lock(local_calib_mutex_);
-
-    ROS_INFO("Local calibration continued");
-
-    local_calib_cond_.notify_all();
-
-    ContinueLocalCalibrationResult result;
-    continue_local_calibration_as_.setSucceeded(result);
-}
-
-void Calibration::completeLocalCalibrationCB(const CompleteLocalCalibrationGoalConstPtr& goal)
-{
-    boost::unique_lock<boost::mutex> lock(local_calib_mutex_);
-
-    ROS_INFO("Completing local calibration ...");
-
-    local_calibration_complete_ = true;
-
-    local_calib_cond_.notify_all();
-
-    CompleteLocalCalibrationResult result;
-    complete_local_calibration_as_.setSucceeded(result);
-}
-*/
 
 void Calibration::processLocalCalibrationFeedback(const InteractiveMarkerFeedbackConstPtr& feedback)
 {
@@ -700,18 +628,18 @@ void Calibration::testCalibration(const std::string& vicon_object_name,
             {
                 // vicon pose to depth sensor pose and publish marker
                 tf::Pose vicon_obj_pose =
-                        calibraion_transform_.viconToDepthSensor(
-                            Transform::toTfPose(vicon_object_pose.response.object_pose));
+                        calibration_transform_.viconToDepthSensor(
+                            CalibrationTransform::toTfPose(vicon_object_pose.response.object_pose));
 
-                publishMarker(Transform::toMsgPose(vicon_obj_pose),
+                publishMarker(CalibrationTransform::toMsgPose(vicon_obj_pose),
                               object_display,
                               object_publisher_,
                               0, 1, 0);
 
-                // set coordinates
                 tf_broadcaster_.sendTransform(
                             tf::StampedTransform(
-                                Transform::toTfTransform(object_tracker.getCurrentPose()),
+                                CalibrationTransform::toTfTransform(
+                                    object_tracker.getCurrentPose()),
                                 ros::Time::now(),
                                 "XTION_RGB",
                                 "ds_object_frame"));
@@ -725,15 +653,16 @@ void Calibration::testCalibration(const std::string& vicon_object_name,
 
                 tf_broadcaster_.sendTransform(
                             tf::StampedTransform(
-                                calibraion_transform_.getViconGlobalFrame()
-                                    * Transform::toTfPose(vicon_object_pose.response.object_pose),
+                                calibration_transform_.globalTransform()
+                                    * CalibrationTransform::toTfPose(
+                                            vicon_object_pose.response.object_pose),
                                 ros::Time::now(),
                                 "XTION_RGB",
                                 "vicon_object_frame"));
 
                 tf_broadcaster_.sendTransform(
                             tf::StampedTransform(
-                                calibraion_transform_.getViconGlobalFrame(),
+                                calibration_transform_.globalTransform(),
                                 ros::Time::now(),
                                 "XTION_RGB",
                                 "vicon_wcs"));
@@ -848,7 +777,7 @@ bool Calibration::continueTestCalibrationCB(ContinueTestCalibration::Request& re
 bool Calibration::saveGlobalCalibrationCB(SaveGlobalCalibration::Request& request,
                                           SaveGlobalCalibration::Response& response)
 {
-    if (calibraion_transform_.saveGlobalCalibration(request.destination))
+    if (calibration_transform_.saveGlobalCalibration(request.destination))
     {
         ROS_INFO("Global calibration saved to %s", request.destination.c_str());
         return true;
@@ -861,7 +790,7 @@ bool Calibration::saveGlobalCalibrationCB(SaveGlobalCalibration::Request& reques
 bool Calibration::loadGlobalCalibrationCB(LoadGlobalCalibration::Request& request,
                                           LoadGlobalCalibration::Response& response)
 {
-    if (calibraion_transform_.loadGlobalCalibration(request.source))
+    if (calibration_transform_.loadGlobalCalibration(request.source))
     {
         ROS_INFO("Global calibration %s loaded", request.source.c_str());
         return true;
@@ -874,7 +803,7 @@ bool Calibration::loadGlobalCalibrationCB(LoadGlobalCalibration::Request& reques
 bool Calibration::saveLocalCalibrationCB(SaveLocalCalibration::Request& request,
                                          SaveLocalCalibration::Response& response)
 {
-    if (calibraion_transform_.saveLocalCalibration(request.destination))
+    if (calibration_transform_.saveLocalCalibration(request.destination))
     {
         ROS_INFO("Local calibration saved to %s", request.destination.c_str());
         return true;
@@ -887,7 +816,7 @@ bool Calibration::saveLocalCalibrationCB(SaveLocalCalibration::Request& request,
 bool Calibration::loadLocalCalibrationCB(LoadLocalCalibration::Request& request,
                                          LoadLocalCalibration::Response& response)
 {
-    if (calibraion_transform_.loadLocalCalibration(request.source))
+    if (calibration_transform_.loadLocalCalibration(request.source))
     {
         ROS_INFO("Local calibration %s loaded", request.source.c_str());
         return true;

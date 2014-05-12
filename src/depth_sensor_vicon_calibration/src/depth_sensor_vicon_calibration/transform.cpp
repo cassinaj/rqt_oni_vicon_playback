@@ -5,44 +5,49 @@
 #include <fstream>
 #include <boost/filesystem.hpp>
 
+#if ROS_VERSION_MINIMUM(1, 3, 0)
+#include <sensor_msgs/distortion_models.h>
+#endif
+
 using namespace depth_sensor_vicon_calibration;
 
-Transform::Transform()
+CalibrationTransform::CalibrationTransform()
 {
     global_transform_.setIdentity();
     local_transform_.setIdentity();
 }
 
-Transform::Transform(const geometry_msgs::Pose& global_calib_transform,
+CalibrationTransform::CalibrationTransform(const geometry_msgs::Pose& global_calib_transform,
                      const geometry_msgs::Pose& local_calib_transform)
 {
     toTfTransform(global_calib_transform, global_transform_);
     toTfTransform(local_calib_transform, local_transform_);
 }
 
-Transform::~Transform()
+CalibrationTransform::~CalibrationTransform()
 {
 }
 
-void Transform::viconToDepthSensor(const tf::Pose& vicon, tf::Pose& depth_sensor)
+tf::Pose CalibrationTransform::viconToDepthSensor(const tf::Pose& vicon)
 {
+    tf::Pose depth_sensor;
+
     // vicon object local frame to depth sensor local frame
     depth_sensor.mult(vicon, local_transform_);
 
     // vicon pose to depth sensor pose
     depth_sensor.mult(global_transform_, depth_sensor);
+
+    return depth_sensor;
 }
 
-tf::Pose Transform::viconToDepthSensor(const tf::Pose& vicon)
+void CalibrationTransform::calibrateGlobally(sensor_msgs::CameraInfoConstPtr camera_info,
+                                             const tf::Pose& vicon_reference_frame,
+                                             const tf::Pose& depth_sensor_reference_frame)
 {
-    tf::Pose pose;
-    viconToDepthSensor(vicon, pose);
-    return pose;
-}
+    // set camera intrinsics
+    toCameraIntrinsics(camera_info, camera_intrinsics_);
 
-void Transform::calibrateGlobally(const tf::Pose& vicon_reference_frame,
-                                  const tf::Pose& depth_sensor_reference_frame)
-{
     // Assuming the local frame in both systems is exactley the same, the global calibration
     // boils down to transforming a reference pose from vicon to depth sensor. This task requires
     // a special calibration object which it's local frame is the same in both systems
@@ -52,8 +57,8 @@ void Transform::calibrateGlobally(const tf::Pose& vicon_reference_frame,
     local_transform_.setIdentity();
 }
 
-void Transform::calibrateLocally(const tf::Pose& vicon_reference_frame,
-                                 const tf::Pose& depth_sensor_reference_frame)
+void CalibrationTransform::calibrateLocally(const tf::Pose& vicon_reference_frame,
+                                            const tf::Pose& depth_sensor_reference_frame)
 {
     // This assumes a given global calibration
     local_transform_.mult(global_transform_, vicon_reference_frame);
@@ -61,12 +66,52 @@ void Transform::calibrateLocally(const tf::Pose& vicon_reference_frame,
     local_transform_ = local_transform_.inverse();
 }
 
-tf::Transform Transform::getViconGlobalFrame()
+void CalibrationTransform::localCalibrationFrom(const YAML::Node& doc)
+{
+    const YAML::Node& local_calibration = doc["local_calibration"];
+    const YAML::Node& local_transform = local_calibration["vicon_local_to_object_local_frame"];
+
+    local_transform >> local_transform_;
+}
+
+void CalibrationTransform::globalCalibrationFrom(const YAML::Node& doc)
+{
+    const YAML::Node& global_calibration = doc["global_calibration"];
+    const YAML::Node& camera_intrinsics = global_calibration["camera_intrinsics"];
+    const YAML::Node& global_transform = global_calibration["vicon_global_frame"];
+
+    global_transform >> global_transform_;
+    camera_intrinsics >> camera_intrinsics_;
+}
+
+void CalibrationTransform::localCalibrationTo(YAML::Emitter& doc)
+{
+    doc << YAML::Key << "local_calibration" << YAML::Value;
+    doc    << YAML::BeginMap;
+    doc    << YAML::Key << "vicon_local_to_object_local_frame" << YAML::Value << local_transform_;
+    doc    << YAML::EndMap;
+}
+
+void CalibrationTransform::globalCalibrationTo(YAML::Emitter& doc)
+{
+    doc << YAML::Key << "global_calibration" << YAML::Value;
+    doc    << YAML::BeginMap;
+    doc    << YAML::Key << "camera_intrinsics" << YAML::Value << camera_intrinsics_;
+    doc    << YAML::Key << "vicon_global_frame" << YAML::Value << global_transform_;
+    doc    << YAML::EndMap;
+}
+
+tf::Transform CalibrationTransform::globalTransform() const
 {
     return global_transform_;
 }
 
-void Transform::toMsgPose(const tf::Pose& tf_pose, geometry_msgs::Pose& msg_pose)
+tf::Transform CalibrationTransform::localTransform() const
+{
+    return local_transform_;
+}
+
+void CalibrationTransform::toMsgPose(const tf::Pose& tf_pose, geometry_msgs::Pose& msg_pose)
 {
     msg_pose.position.x = tf_pose.getOrigin().getX();
     msg_pose.position.y = tf_pose.getOrigin().getY();
@@ -79,7 +124,7 @@ void Transform::toMsgPose(const tf::Pose& tf_pose, geometry_msgs::Pose& msg_pose
     msg_pose.orientation.z = orientation.getZ();
 }
 
-void Transform::toTfPose(const geometry_msgs::Pose& msg_pose, tf::Pose& tf_pose)
+void CalibrationTransform::toTfPose(const geometry_msgs::Pose& msg_pose, tf::Pose& tf_pose)
 {
     tf_pose.setOrigin(tf::Vector3(msg_pose.position.x,
                                   msg_pose.position.y,
@@ -91,57 +136,160 @@ void Transform::toTfPose(const geometry_msgs::Pose& msg_pose, tf::Pose& tf_pose)
                                        msg_pose.orientation.w));
 }
 
-void Transform::toTfTransform(const geometry_msgs::Pose& msg_pose, tf::Transform& tf_transform)
+void CalibrationTransform::toTfTransform(const geometry_msgs::Pose& msg_pose,
+                                         tf::Transform& tf_transform)
 {
     toTfPose(msg_pose, tf_transform);
 }
 
-geometry_msgs::Pose Transform::toMsgPose(const tf::Pose& tf_pose)
+void CalibrationTransform::toCameraIntrinsics(
+        sensor_msgs::CameraInfoConstPtr msg_camera_info,
+        CalibrationTransform::CameraIntrinsics& camera_intrinsics)
+{
+    camera_intrinsics.f = (msg_camera_info->K[0] + msg_camera_info->K[4])/2.;
+    camera_intrinsics.cx = msg_camera_info->K[2];
+    camera_intrinsics.cy = msg_camera_info->K[5];
+}
+
+void CalibrationTransform::toCameraInfo(
+        const CalibrationTransform::CameraIntrinsics& camera_intrinsics,
+        sensor_msgs::CameraInfoPtr msg_camera_info)
+{
+    /*
+    msg_camera_info->header.stamp    = ;
+    msg_camera_info->header.frame_id = ;
+    msg_camera_info->width           = ;
+    msg_camera_info->height          = ;
+    */
+
+
+  #if ROS_VERSION_MINIMUM(1, 3, 0)
+    msg_camera_info->D = std::vector<double>(5, 0.0);
+    msg_camera_info->distortion_model = sensor_msgs::distortion_models::PLUMB_BOB;
+  #else
+    msg_camera_info->D.assign (0.0);
+  #endif
+    msg_camera_info->K.assign (0.0);
+    msg_camera_info->R.assign (0.0);
+    msg_camera_info->P.assign (0.0);
+    // Simple camera matrix: square pixels, principal point at center
+    msg_camera_info->K[0] = msg_camera_info->K[4] = camera_intrinsics.f;
+    msg_camera_info->K[2] = camera_intrinsics.cx;
+    msg_camera_info->K[5] = camera_intrinsics.cy;
+    msg_camera_info->K[8] = 1.0;
+    // no rotation: identity
+    msg_camera_info->R[0] = msg_camera_info->R[4] = msg_camera_info->R[8] = 1.0;
+    // no rotation, no translation => P=K(I|0)=(K|0)
+    msg_camera_info->P[0] = msg_camera_info->P[5] = msg_camera_info->K[0];
+    msg_camera_info->P[2] = msg_camera_info->K[2];
+    msg_camera_info->P[6] = msg_camera_info->K[5];
+    msg_camera_info->P[10] = 1.0;
+}
+
+geometry_msgs::Pose CalibrationTransform::toMsgPose(const tf::Pose& tf_pose)
 {
     geometry_msgs::Pose pose;
     toMsgPose(tf_pose, pose);
     return pose;
 }
 
-tf::Pose Transform::toTfPose(const geometry_msgs::Pose& msg_pose)
+tf::Pose CalibrationTransform::toTfPose(const geometry_msgs::Pose& msg_pose)
 {
     tf::Pose pose;
     toTfPose(msg_pose, pose);
     return pose;
 }
 
-tf::Transform Transform::toTfTransform(const geometry_msgs::Pose& msg_pose)
+tf::Transform CalibrationTransform::toTfTransform(const geometry_msgs::Pose& msg_pose)
 {
     tf::Transform transform;
     toTfTransform(msg_pose, transform);
     return transform;
 }
 
-bool Transform::saveGlobalCalibration(const std::string& destination)
+CalibrationTransform::CameraIntrinsics CalibrationTransform::toCameraIntrinsics(
+        sensor_msgs::CameraInfoConstPtr msg_camera_info)
 {
-    return saveTransform(destination, global_transform_);
+    CalibrationTransform::CameraIntrinsics camera_intrinsics;
+    toCameraIntrinsics(msg_camera_info, camera_intrinsics);
+    return camera_intrinsics;
 }
 
-bool Transform::saveLocalCalibration(const std::string &destination)
+sensor_msgs::CameraInfoPtr CalibrationTransform::toCameraInfo(
+        const CalibrationTransform::CameraIntrinsics& camera_intrinsics)
 {
-    return saveTransform(destination, local_transform_);
+    sensor_msgs::CameraInfoPtr msg_camera_info = boost::make_shared<sensor_msgs::CameraInfo>();
+    toCameraInfo(camera_intrinsics, msg_camera_info);
+    return msg_camera_info;
 }
 
-bool Transform::loadGlobalCalibration(const std::string& source)
+bool CalibrationTransform::saveGlobalCalibration(const std::string& destination)
 {
-    return loadTransform(source, global_transform_);
+    YAML::Emitter doc;
+    doc.SetIndent(2);
+    try
+    {
+        globalCalibrationTo(doc);
+    }
+    catch(...)
+    {
+        return false;
+    }
+
+    return saveCalibration(destination, doc);
 }
 
-bool Transform::loadLocalCalibration(const std::string &source)
+bool CalibrationTransform::saveLocalCalibration(const std::string &destination)
 {
-    return loadTransform(source, local_transform_);
+    YAML::Emitter doc;
+    doc.SetIndent(2);
+    try
+    {
+        localCalibrationTo(doc);
+    }
+    catch(...)
+    {
+        return false;
+    }
+
+    return saveCalibration(destination, doc);
 }
 
-bool Transform::saveTransform(const std::string &destination, const tf::Transform &transform) const
+bool CalibrationTransform::loadGlobalCalibration(const std::string& source)
 {
-    tf::Quaternion orientation = transform.getRotation();
+    try
+    {
+        YAML::Node doc;
+        loadCalibrationDoc(source, doc);
+        globalCalibrationFrom(doc);
+    }
+    catch(...)
+    {
+        return false;
+    }
 
-    std::ofstream transform_file;
+    return true;
+}
+
+bool CalibrationTransform::loadLocalCalibration(const std::string &source)
+{
+    try
+    {
+        YAML::Node doc;
+        loadCalibrationDoc(source, doc);
+        localCalibrationFrom(doc);
+    }
+    catch(...)
+    {
+        return false;
+    }
+
+    return true;
+}
+
+bool CalibrationTransform::saveCalibration(const std::string& destination, const YAML::Emitter& doc)
+{
+    std::ofstream calibration_file;
     boost::filesystem::path dir(destination);
 
     if (!boost::filesystem::create_directories(dir.remove_filename()))
@@ -150,44 +298,21 @@ bool Transform::saveTransform(const std::string &destination, const tf::Transfor
         // return false;
     }
 
-    transform_file.open(destination.c_str());
-    transform_file << transform.getOrigin().getX()  << " "
-                     << transform.getOrigin().getY()  << " "
-                     << transform.getOrigin().getZ()  << " "
-                     << orientation.getW()  << " "
-                     << orientation.getX()  << " "
-                     << orientation.getY()  << " "
-                     << orientation.getZ();
-
-    if (transform_file.is_open())
+    calibration_file.open(destination.c_str());
+    if (calibration_file.is_open())
     {
-        transform_file.close();
+
+        calibration_file << doc.c_str();
+        calibration_file.close();
         return true;
     }
 
     return false;
 }
 
-bool Transform::loadTransform(const std::string& source, tf::Transform& transform)
+void CalibrationTransform::loadCalibrationDoc(const std::string& source, YAML::Node& doc)
 {
-    geometry_msgs::Pose pose;
-
-    std::ifstream transform_file;
-    transform_file.open(source.c_str());
-    if (transform_file.is_open())
-    {
-        transform_file >> pose.position.x;
-        transform_file >> pose.position.y;
-        transform_file >> pose.position.z;
-        transform_file >> pose.orientation.w;
-        transform_file >> pose.orientation.x;
-        transform_file >> pose.orientation.y;
-        transform_file >> pose.orientation.z;
-        transform_file.close();
-
-        Transform::toTfTransform(pose, transform);
-        return true;
-    }
-
-    return false;
+    std::ifstream calibration_file(source.c_str());
+    YAML::Parser parser(calibration_file);
+    parser.GetNextDocument(doc);
 }

@@ -48,6 +48,8 @@
 #ifndef DEPTH_SENSOR_VICON_CALIBRATION_TRANSFORM_HPP
 #define DEPTH_SENSOR_VICON_CALIBRATION_TRANSFORM_HPP
 
+#include <boost/shared_ptr.hpp>
+
 #include <sensor_msgs/CameraInfo.h>
 #include <geometry_msgs/Pose.h>
 #include <tf/LinearMath/Vector3.h>
@@ -63,6 +65,8 @@ namespace depth_sensor_vicon_calibration
     class CalibrationTransform
     {
     public:
+        typedef boost::shared_ptr<CalibrationTransform> Ptr;
+
         struct CameraIntrinsics
         {
             double f;
@@ -84,6 +88,7 @@ namespace depth_sensor_vicon_calibration
 
         tf::Transform globalTransform() const;
         tf::Transform localTransform() const;
+        const CameraIntrinsics& cameraIntrinsics() const;
         tf::Pose viconToDepthSensor(const tf::Pose& vicon);
 
         void localCalibrationFrom(const YAML::Node& doc);

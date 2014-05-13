@@ -71,9 +71,14 @@
 #include <ros/package.h>
 #include <rviz/load_resource.h>
 
+// services
+#include <oni_vicon_player/Pause.h>
+#include <oni_vicon_player/SeekFrame.h>
+#include <oni_vicon_player/SetPlaybackSpeed.h>
 
 using namespace rviz;
 using namespace rqt_playback_controller;
+using namespace oni_vicon_player;
 
 PlaybackController::PlaybackController():
     rqt_gui_cpp::Plugin(),
@@ -123,9 +128,13 @@ void PlaybackController::initPlugin(qt_gui_cpp::PluginContext& context)
     connect(ui_.openButton, SIGNAL(clicked()), this, SLOT(onOpen()));
     connect(ui_.closeButton, SIGNAL(clicked()), this, SLOT(onClose()));
     connect(ui_.playButton, SIGNAL(clicked()), this, SLOT(onPlay()));
+    connect(ui_.pauseButton, SIGNAL(clicked()), this, SLOT(onPause()));
     connect(ui_.stopButton, SIGNAL(clicked()), this, SLOT(onStop()));
     connect(ui_.selectButton, SIGNAL(clicked()), this, SLOT(onSelectRecordingDirectory()));
-    connect(ui_.frameSlider, SIGNAL(sliderMoved(int)), this, SLOT(onSilderMoved(int)));
+
+    connect(ui_.frameSlider, SIGNAL(valueChanged(int)), this, SLOT(onSetFrame(int)));
+    connect(ui_.playbackSpeedSpinBox, SIGNAL(valueChanged(double)),
+            this, SLOT(onSetPlaybackSpeed(double)));
 
     connect(timer_, SIGNAL(timeout()), this, SLOT(onUpdateStatus()));
     connect(this, SIGNAL(updateOpeningProgress(int,int,double,int,int)),
@@ -158,12 +167,12 @@ void PlaybackController::shutdownPlugin()
 }
 
 void PlaybackController::saveSettings(qt_gui_cpp::Settings& plugin_settings,
-                                         qt_gui_cpp::Settings& instance_settings) const
+                                      qt_gui_cpp::Settings& instance_settings) const
 {
 }
 
 void PlaybackController::restoreSettings(const qt_gui_cpp::Settings& plugin_settings,
-                                            const qt_gui_cpp::Settings& instance_settings)
+                                         const qt_gui_cpp::Settings& instance_settings)
 {
 }
 
@@ -188,10 +197,32 @@ void PlaybackController::onPlay()
     ACTION_SEND_GOAL(PlaybackController, oni_vicon_player, Play);
 }
 
+void PlaybackController::onPause()
+{
+    if (isActive("playing"))
+    {
+        Pause service;
+        service.request.paused = ui_.pauseButton->isChecked();
+        if (ros::service::call(Pause::Request::SERVICE_NAME, service))
+        {
+            setActivity("paused", service.request.paused);
+            ROS_INFO("Playback %s", service.request.paused ? "paused" : "resumed");
+        }
+        else
+        {
+            ROS_ERROR("Pausing playback failed.");
+        }
+    }
+}
+
 void PlaybackController::onStop()
 {
-    ACTION(Play).cancelAllGoals();
     setActivity("playing", false);
+    setActivity("paused", false);
+    ui_.pauseButton->setChecked(false);
+    ui_.frameSlider->setValue(0);
+
+    ACTION(Play).cancelAllGoals();    
 }
 
 void PlaybackController::onSelectRecordingDirectory()
@@ -220,10 +251,11 @@ void PlaybackController::onUpdateStatus()
     if (!player_node_online) return;
 
     ui_.selectDirFrame->setEnabled(!isActive("open") && !isActive("opening"));
-    ui_.controlFrame->setEnabled(isActive("open") && !isActive("playing"));
+    ui_.controlFrame->setEnabled(isActive("open") && !isActive("playing") || isActive("paused"));
 
-    ui_.closeButton->setEnabled(isActive("open") || isActive("opening"));
+    ui_.closeButton->setEnabled((isActive("open") || isActive("opening")) && !isActive("playing"));
     ui_.playButton->setEnabled(isActive("open") && !isActive("playing"));
+    ui_.pauseButton->setEnabled(isActive("open") && isActive("playing"));
     ui_.stopButton->setEnabled(isActive("open") && isActive("playing"));
 }
 
@@ -245,7 +277,6 @@ void PlaybackController::onUpdateOpeningProgress(int progress,
     statusItem("Depth Sensor Frames").status->setText(QString::number(total_depth_sensor_frames));
 
     ui_.frameSlider->setMaximum(total_depth_sensor_frames);
-    ui_.startingFrameSpinBox->setMaximum(total_depth_sensor_frames);
 }
 
 void PlaybackController::onUpdatePlayback(double time,
@@ -257,15 +288,36 @@ void PlaybackController::onUpdatePlayback(double time,
     statusItem("Current Depth Sensor Frames").status->setText(QString::number(depth_sensor_frame));
     statusItem("Playback").status->setText(isActive("playing") ? "Playing": "Stopped");
 
-    ui_.frameSlider->setValue(depth_sensor_frame);
-    ui_.startingFrameSpinBox->setValue(depth_sensor_frame);
-    ui_.startingTimeSpinBox->setValue(time);
+    if (!isActive("paused") && isActive("playing"))
+    {
+        ui_.frameSlider->setValue(depth_sensor_frame);
+    }
 }
 
-void PlaybackController::onSilderMoved(int frame)
+void PlaybackController::onSetFrame(int frame)
 {
-    ui_.startingFrameSpinBox->setValue(frame);
-    ui_.startingTimeSpinBox->setValue(frame / 30.);
+    if ((isActive("paused") || !isActive("playing")) && isActive("open"))
+    {
+        SeekFrame service;
+        service.request.frame = frame;
+        ros::service::call(SeekFrame::Request::SERVICE_NAME, service);
+
+        if (!isActive("playing") && isActive("open"))
+        {
+            statusItem("Current Time").status->setText(QString().sprintf("%4.2fs", frame/30.f));
+            //statusItem("Current Vicon Frame").status->setText(QString::number(vicon_frame));
+            statusItem("Current Depth Sensor Frames").status->setText(QString::number(frame));
+        }
+
+        ROS_INFO("Set current frame %ld", service.request.frame);
+    }
+}
+
+void PlaybackController::onSetPlaybackSpeed(double speed)
+{
+    SetPlaybackSpeed service;
+    service.request.speed = speed;
+    ros::service::call(SetPlaybackSpeed::Request::SERVICE_NAME, service);
 }
 
 // ============================================================================================== //

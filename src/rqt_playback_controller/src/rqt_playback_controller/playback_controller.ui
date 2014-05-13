@@ -51,81 +51,19 @@
       <enum>QFrame::Plain</enum>
      </property>
      <layout class="QGridLayout" name="gridLayout">
-      <item row="0" column="0" colspan="2">
-       <widget class="QFrame" name="selectDirFrame">
-        <property name="frameShape">
-         <enum>QFrame::NoFrame</enum>
-        </property>
-        <property name="frameShadow">
-         <enum>QFrame::Plain</enum>
-        </property>
-        <layout class="QGridLayout" name="gridLayout_2">
-         <property name="topMargin">
-          <number>9</number>
-         </property>
-         <property name="rightMargin">
-          <number>0</number>
-         </property>
-         <property name="spacing">
-          <number>6</number>
-         </property>
-         <item row="0" column="3">
-          <widget class="QPushButton" name="selectButton">
-           <property name="text">
-            <string>    Select</string>
-           </property>
-           <property name="icon">
-            <iconset theme="folder">
-             <normaloff/>
-            </iconset>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="4">
-          <widget class="QPushButton" name="openButton">
-           <property name="text">
-            <string>    Open</string>
-           </property>
-           <property name="icon">
-            <iconset theme="document-open">
-             <normaloff/>
-            </iconset>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="1">
-          <widget class="QLineEdit" name="recordingDirLineEdit"/>
-         </item>
-         <item row="0" column="0">
-          <widget class="QLabel" name="recordingLabel">
-           <property name="text">
-            <string>Recording</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="0" colspan="5">
-          <widget class="QProgressBar" name="openingProgressBar">
-           <property name="value">
-            <number>0</number>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </widget>
-      </item>
-      <item row="4" column="2">
-       <widget class="QPushButton" name="stopButton">
+      <item row="4" column="1">
+       <widget class="QPushButton" name="playButton">
         <property name="text">
-         <string>       Stop</string>
+         <string>      Play</string>
         </property>
         <property name="icon">
-         <iconset theme="media-playback-stop">
+         <iconset theme="media-playback-start">
           <normaloff/>
          </iconset>
         </property>
        </widget>
       </item>
-      <item row="3" column="0" colspan="3">
+      <item row="3" column="0" colspan="4">
        <widget class="QFrame" name="controlFrame">
         <property name="frameShape">
          <enum>QFrame::NoFrame</enum>
@@ -137,21 +75,7 @@
          <property name="margin">
           <number>0</number>
          </property>
-         <item row="3" column="0">
-          <widget class="QLabel" name="jumpToDepthSensorFrameLabel">
-           <property name="text">
-            <string>Starting Frame</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="0">
-          <widget class="QLabel" name="speedLabel">
-           <property name="text">
-            <string>Playback Speed</string>
-           </property>
-          </widget>
-         </item>
-         <item row="4" column="0" colspan="5">
+         <item row="2" column="0" colspan="5">
           <widget class="QSlider" name="frameSlider">
            <property name="maximum">
             <number>1000</number>
@@ -171,31 +95,18 @@
            <property name="invertedControls">
             <bool>false</bool>
            </property>
+           <property name="tickPosition">
+            <enum>QSlider::NoTicks</enum>
+           </property>
+           <property name="tickInterval">
+            <number>100</number>
+           </property>
           </widget>
          </item>
-         <item row="1" column="2" colspan="3">
-          <spacer name="horizontalSpacer">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-         <item row="2" column="1">
-          <widget class="QDoubleSpinBox" name="startingTimeSpinBox">
-           <property name="minimumSize">
-            <size>
-             <width>150</width>
-             <height>0</height>
-            </size>
-           </property>
-           <property name="decimals">
-            <number>3</number>
+         <item row="1" column="0">
+          <widget class="QLabel" name="speedLabel">
+           <property name="text">
+            <string>Playback Speed</string>
            </property>
           </widget>
          </item>
@@ -218,45 +129,35 @@
            </property>
           </widget>
          </item>
-         <item row="2" column="0">
-          <widget class="QLabel" name="jumpToTimeLabel">
-           <property name="text">
-            <string>Starting Time</string>
+         <item row="1" column="2" colspan="3">
+          <spacer name="horizontalSpacer">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
            </property>
-          </widget>
-         </item>
-         <item row="3" column="1">
-          <widget class="QSpinBox" name="startingFrameSpinBox"/>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
          </item>
         </layout>
        </widget>
       </item>
-      <item row="4" column="0">
-       <spacer name="horizontalSpacer_2">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>40</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-      <item row="4" column="1">
-       <widget class="QPushButton" name="playButton">
+      <item row="4" column="3">
+       <widget class="QPushButton" name="stopButton">
         <property name="text">
-         <string>      Play</string>
+         <string>       Stop</string>
         </property>
         <property name="icon">
-         <iconset theme="media-playback-start">
+         <iconset theme="media-playback-stop">
           <normaloff/>
          </iconset>
         </property>
        </widget>
       </item>
-      <item row="0" column="2">
+      <item row="0" column="3">
        <widget class="QFrame" name="frame_2">
         <property name="frameShape">
          <enum>QFrame::NoFrame</enum>
@@ -304,6 +205,103 @@
             </size>
            </property>
           </spacer>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <spacer name="horizontalSpacer_2">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item row="4" column="2">
+       <widget class="QPushButton" name="pauseButton">
+        <property name="text">
+         <string>   Pause</string>
+        </property>
+        <property name="icon">
+         <iconset theme="media-playback-pause">
+          <normaloff/>
+         </iconset>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0" colspan="3">
+       <widget class="QFrame" name="selectDirFrame">
+        <property name="frameShape">
+         <enum>QFrame::NoFrame</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Plain</enum>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_2">
+         <property name="topMargin">
+          <number>9</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="spacing">
+          <number>6</number>
+         </property>
+         <item row="0" column="3">
+          <widget class="QPushButton" name="selectButton">
+           <property name="text">
+            <string>    Select</string>
+           </property>
+           <property name="icon">
+            <iconset theme="folder">
+             <normaloff/>
+            </iconset>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="4">
+          <widget class="QPushButton" name="openButton">
+           <property name="text">
+            <string>    Open</string>
+           </property>
+           <property name="icon">
+            <iconset theme="document-open">
+             <normaloff/>
+            </iconset>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="recordingDirLineEdit">
+           <property name="text">
+            <string>/home/issac_local/recordings/calibration_object_test</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="QLabel" name="recordingLabel">
+           <property name="text">
+            <string>Recording</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0" colspan="5">
+          <widget class="QProgressBar" name="openingProgressBar">
+           <property name="value">
+            <number>0</number>
+           </property>
+          </widget>
          </item>
         </layout>
        </widget>

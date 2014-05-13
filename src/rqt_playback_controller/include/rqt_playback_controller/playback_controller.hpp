@@ -104,6 +104,7 @@ namespace rqt_playback_controller
         void onOpen();
         void onClose();
         void onPlay();
+        void onPause();
         void onStop();
         void onSelectRecordingDirectory();
         void onUpdateStatus();
@@ -113,8 +114,9 @@ namespace rqt_playback_controller
                                      int total_vicon_frames,
                                      int total_depth_sensor_frames);
         void onUpdatePlayback(double time, int vicon_frame, int depth_sensor_frame);
-        void onSilderMoved(int frame);
-
+        void onSetFrame(int frame);
+        void onSetTime(double time);
+        void onSetPlaybackSpeed(double speed);
 
     signals:
         void updateOpeningProgress(int progress,

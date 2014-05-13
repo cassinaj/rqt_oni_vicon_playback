@@ -111,6 +111,11 @@ tf::Transform CalibrationTransform::localTransform() const
     return local_transform_;
 }
 
+const CalibrationTransform::CameraIntrinsics& CalibrationTransform::cameraIntrinsics() const
+{
+    return camera_intrinsics_;
+}
+
 void CalibrationTransform::toMsgPose(const tf::Pose& tf_pose, geometry_msgs::Pose& msg_pose)
 {
     msg_pose.position.x = tf_pose.getOrigin().getX();
@@ -156,18 +161,21 @@ void CalibrationTransform::toCameraInfo(
         sensor_msgs::CameraInfoPtr msg_camera_info)
 {
     /*
+     * be aware to set these !
     msg_camera_info->header.stamp    = ;
     msg_camera_info->header.frame_id = ;
     msg_camera_info->width           = ;
     msg_camera_info->height          = ;
     */
 
-  #if ROS_VERSION_MINIMUM(1, 3, 0)
+    /* taken from arm_rgbd package */
+
+#if ROS_VERSION_MINIMUM(1, 3, 0)
     msg_camera_info->D = std::vector<double>(5, 0.0);
     msg_camera_info->distortion_model = sensor_msgs::distortion_models::PLUMB_BOB;
-  #else
+#else
     msg_camera_info->D.assign (0.0);
-  #endif
+#endif
     msg_camera_info->K.assign (0.0);
     msg_camera_info->R.assign (0.0);
     msg_camera_info->P.assign (0.0);
@@ -290,14 +298,15 @@ bool CalibrationTransform::loadLocalCalibration(const std::string &source)
     return true;
 }
 
-bool CalibrationTransform::saveCalibration(const std::string& destination, const YAML::Emitter& doc) const
+bool CalibrationTransform::saveCalibration(const std::string& destination,
+                                           const YAML::Emitter& doc) const
 {
     std::ofstream calibration_file;
     boost::filesystem::path dir(destination);
 
     if (!boost::filesystem::create_directories(dir.remove_filename()))
     {
-        // ignore since it might exist already
+        // ignore, since it might exist already
         // return false;
     }
 

@@ -860,7 +860,7 @@ void AcquisitionController::onDetectViconObjects()
     {
         ui_.viconObjectsComboBox->clear();
         ui_.viconObjectsComboBox->addItem("");
-        for (int i = 0; i < vicon_objects.response.object_names.size(); i++)
+        for (int i = 0; i < vicon_objects.response.object_names.size(); ++i)
         {
             ui_.viconObjectsComboBox->addItem(vicon_objects.response.object_names[i].c_str());
         }
@@ -1101,7 +1101,7 @@ ACTION_ON_FEEDBACK(AcquisitionController, oni_vicon_recorder, RunDepthSensor)
 
     // set modes
     ui_.deviceModeComboBox->clear();
-    for (int i = 0; i < ACTION_FEEDBACK(RunDepthSensor)->modes.size(); i++)
+    for (int i = 0; i < ACTION_FEEDBACK(RunDepthSensor)->modes.size(); ++i)
     {
         ui_.deviceModeComboBox->addItem(ACTION_FEEDBACK(RunDepthSensor)->modes[i].c_str());
 

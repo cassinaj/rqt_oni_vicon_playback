@@ -469,7 +469,9 @@ void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
         // calculate local transformation
         calibration_transform_.calibrateLocally(
                     CalibrationTransform::toTfPose(vicon_object_pose.response.object_pose),
-                    CalibrationTransform::toTfPose(object_tracker.getCurrentPose()));
+                    CalibrationTransform::toTfPose(object_tracker.getCurrentPose()),
+                    goal->calibration_object,
+                    goal->calibration_object_display);
 
         feedback.finished = true;
         publishLocalStatus("Local calibration ready.", feedback);

@@ -28,7 +28,7 @@ CalibrationTransform::~CalibrationTransform()
 {
 }
 
-tf::Pose CalibrationTransform::viconToDepthSensor(const tf::Pose& vicon)
+tf::Pose CalibrationTransform::viconToDepthSensor(const tf::Pose& vicon) const
 {
     tf::Pose depth_sensor;
 
@@ -58,20 +58,27 @@ void CalibrationTransform::calibrateGlobally(sensor_msgs::CameraInfoConstPtr cam
 }
 
 void CalibrationTransform::calibrateLocally(const tf::Pose& vicon_reference_frame,
-                                            const tf::Pose& depth_sensor_reference_frame)
+                                            const tf::Pose& depth_sensor_reference_frame,
+                                            const std::string object,
+                                            const std::string object_display)
 {
     // This assumes a given global calibration
     local_transform_.mult(global_transform_, vicon_reference_frame);
     local_transform_.mult(depth_sensor_reference_frame.inverse(), local_transform_);
     local_transform_ = local_transform_.inverse();
+
+    object_ = object;
+    object_display_ = object_display;
 }
 
 void CalibrationTransform::localCalibrationFrom(const YAML::Node& doc)
 {
-    const YAML::Node& local_calibration = doc["local_calibration"];
-    const YAML::Node& local_transform = local_calibration["vicon_local_to_object_local_frame"];
+//    const YAML::Node& local_calibration = doc["local_calibration"];
+//    const YAML::Node& local_transform = local_calibration["vicon_local_to_object_local_frame"];
 
-    local_transform >> local_transform_;
+    doc["local_calibration"]["vicon_local_to_object_local_frame"] >> local_transform_;
+    doc["local_calibration"]["object_mesh"] >> object_;
+    doc["local_calibration"]["object_mesh_display"] >> object_display_;
 }
 
 void CalibrationTransform::globalCalibrationFrom(const YAML::Node& doc)
@@ -88,6 +95,8 @@ void CalibrationTransform::localCalibrationTo(YAML::Emitter& doc) const
 {
     doc << YAML::Key << "local_calibration" << YAML::Value
            << YAML::BeginMap
+           << YAML::Key << "object_mesh" << YAML::Value << object_
+           << YAML::Key << "object_mesh_display" << YAML::Value << object_display_
            << YAML::Key << "vicon_local_to_object_local_frame" << YAML::Value << local_transform_
            << YAML::EndMap;
 }
@@ -274,8 +283,8 @@ bool CalibrationTransform::loadGlobalCalibration(const std::string& source)
         loadCalibrationDoc(source, doc);
         globalCalibrationFrom(doc);
     }
-    catch(...)
-    {
+    catch(YAML::ParserException& e) {
+        std::cout << e.what() << "\n";
         return false;
     }
 
@@ -290,12 +299,22 @@ bool CalibrationTransform::loadLocalCalibration(const std::string &source)
         loadCalibrationDoc(source, doc);
         localCalibrationFrom(doc);
     }
-    catch(...)
-    {
+    catch(YAML::ParserException& e) {
+        std::cout << e.what() << "\n";
         return false;
     }
 
     return true;
+}
+
+std::string CalibrationTransform::object() const
+{
+    return object_;
+}
+
+std::string CalibrationTransform::objectDisplay() const
+{
+    return object_display_;
 }
 
 bool CalibrationTransform::saveCalibration(const std::string& destination,

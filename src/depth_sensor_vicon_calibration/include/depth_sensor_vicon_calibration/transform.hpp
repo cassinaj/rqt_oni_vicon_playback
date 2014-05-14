@@ -84,12 +84,14 @@ namespace depth_sensor_vicon_calibration
                                const tf::Pose& vicon_reference_frame,
                                const tf::Pose& depth_sensor_reference_frame);
         void calibrateLocally(const tf::Pose& vicon_reference_frame,
-                              const tf::Pose& depth_sensor_reference_frame);
+                              const tf::Pose& depth_sensor_reference_frame,
+                              const std::string object,
+                              const std::string object_display);
 
         tf::Transform globalTransform() const;
         tf::Transform localTransform() const;
         const CameraIntrinsics& cameraIntrinsics() const;
-        tf::Pose viconToDepthSensor(const tf::Pose& vicon);
+        tf::Pose viconToDepthSensor(const tf::Pose& vicon) const;
 
         void localCalibrationFrom(const YAML::Node& doc);
         void globalCalibrationFrom(const YAML::Node& doc);
@@ -102,6 +104,9 @@ namespace depth_sensor_vicon_calibration
 
         bool saveLocalCalibration(const std::string& destination) const;
         bool loadLocalCalibration(const std::string& source);
+
+        std::string object() const;
+        std::string objectDisplay() const;
 
     public:
         static void toMsgPose(const tf::Pose& tf_pose, geometry_msgs::Pose& msg_pose);
@@ -126,6 +131,9 @@ namespace depth_sensor_vicon_calibration
         tf::Transform global_transform_;
         tf::Transform local_transform_;
         CameraIntrinsics camera_intrinsics_;
+
+        std::string object_;
+        std::string object_display_;
     };
 
 

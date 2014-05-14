@@ -308,8 +308,6 @@ void PlaybackController::onSetFrame(int frame)
             //statusItem("Current Vicon Frame").status->setText(QString::number(vicon_frame));
             statusItem("Current Depth Sensor Frames").status->setText(QString::number(frame));
         }
-
-        ROS_INFO("Set current frame %ld", service.request.frame);
     }
 }
 

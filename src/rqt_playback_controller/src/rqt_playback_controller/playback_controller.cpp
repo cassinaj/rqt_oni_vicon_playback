@@ -194,6 +194,7 @@ void PlaybackController::onClose()
 
 void PlaybackController::onPlay()
 {
+    ACTION_GOAL(Play).starting_frame = ui_.frameSlider->value();
     ACTION_SEND_GOAL(PlaybackController, oni_vicon_player, Play);
 }
 

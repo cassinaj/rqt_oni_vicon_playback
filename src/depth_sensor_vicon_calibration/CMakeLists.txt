@@ -67,12 +67,12 @@ include_directories(include ${catkin_INCLUDE_DIRS})
 
 set(headers
     include/${PROJECT_NAME}/calibration.hpp
-    include/${PROJECT_NAME}/transform.hpp
+    #include/${PROJECT_NAME}/transform.hpp
 )
 
 add_library(depth_sensor_vicon_calibration
    src/${PROJECT_NAME}/calibration.cpp
-   src/${PROJECT_NAME}/transform.cpp
+   #src/${PROJECT_NAME}/transform.cpp
 )
 
 target_link_libraries(depth_sensor_vicon_calibration

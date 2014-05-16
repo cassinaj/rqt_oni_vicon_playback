@@ -176,7 +176,7 @@ namespace depth_sensor_vicon_calibration
 
         ros::Publisher object_publisher_;
 
-        CalibrationTransform calibration_transform_;
+        Transformer calibration_transform_;
 
         bool global_calibration_complete_;
         boost::condition_variable global_calib_cond_;

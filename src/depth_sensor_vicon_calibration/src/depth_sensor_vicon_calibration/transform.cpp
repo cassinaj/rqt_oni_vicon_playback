@@ -73,9 +73,6 @@ void CalibrationTransform::calibrateLocally(const tf::Pose& vicon_reference_fram
 
 void CalibrationTransform::localCalibrationFrom(const YAML::Node& doc)
 {
-//    const YAML::Node& local_calibration = doc["local_calibration"];
-//    const YAML::Node& local_transform = local_calibration["vicon_local_to_object_local_frame"];
-
     doc["local_calibration"]["vicon_local_to_object_local_frame"] >> local_transform_;
     doc["local_calibration"]["object_mesh"] >> object_;
     doc["local_calibration"]["object_mesh_display"] >> object_display_;
@@ -237,74 +234,6 @@ sensor_msgs::CameraInfoPtr CalibrationTransform::toCameraInfo(
     sensor_msgs::CameraInfoPtr msg_camera_info = boost::make_shared<sensor_msgs::CameraInfo>();
     toCameraInfo(camera_intrinsics, msg_camera_info);
     return msg_camera_info;
-}
-
-bool CalibrationTransform::saveGlobalCalibration(const std::string& destination) const
-{
-    YAML::Emitter doc;
-    doc.SetIndent(2);
-    try
-    {
-        doc << YAML::BeginMap;
-        globalCalibrationTo(doc);
-        doc << YAML::EndMap;
-    }
-    catch(...)
-    {
-        return false;
-    }
-
-    return saveCalibration(destination, doc);
-}
-
-bool CalibrationTransform::saveLocalCalibration(const std::string &destination) const
-{
-    YAML::Emitter doc;
-    doc.SetIndent(2);
-    try
-    {
-        doc << YAML::BeginMap;
-        localCalibrationTo(doc);
-        doc << YAML::EndMap;
-    }
-    catch(...)
-    {
-        return false;
-    }
-
-    return saveCalibration(destination, doc);
-}
-
-bool CalibrationTransform::loadGlobalCalibration(const std::string& source)
-{
-    try
-    {
-        YAML::Node doc;
-        loadCalibrationDoc(source, doc);
-        globalCalibrationFrom(doc);
-    }
-    catch(YAML::ParserException& e) {
-        std::cout << e.what() << "\n";
-        return false;
-    }
-
-    return true;
-}
-
-bool CalibrationTransform::loadLocalCalibration(const std::string &source)
-{
-    try
-    {
-        YAML::Node doc;
-        loadCalibrationDoc(source, doc);
-        localCalibrationFrom(doc);
-    }
-    catch(YAML::ParserException& e) {
-        std::cout << e.what() << "\n";
-        return false;
-    }
-
-    return true;
 }
 
 std::string CalibrationTransform::object() const

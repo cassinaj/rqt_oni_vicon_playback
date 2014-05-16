@@ -62,10 +62,10 @@ using namespace oni_vicon_recorder;
 Calibration::Calibration(ros::NodeHandle& node_handle,
                          int global_calibration_iterations,
                          int local_calibration_iterations,
-                         const std::string &global_calibration_object_name,
-                         const std::string &global_calibration_object,
-                         const std::string &global_calibration_object_display,
-                         const std::string &camera_info_topic):
+                         const std::string& global_calibration_object_name,
+                         const std::string& global_calibration_object,
+                         const std::string& global_calibration_object_display,
+                         const std::string& camera_info_topic):
     node_handle_(node_handle),
     global_calibration_iterations_(global_calibration_iterations),
     local_calibration_iterations_(local_calibration_iterations),
@@ -81,9 +81,9 @@ Calibration::Calibration(ros::NodeHandle& node_handle,
                            boost::bind(&Calibration::globalCalibrationCB, this, _1),
                            false),
     local_calibration_as_(node_handle,
-                         LocalCalibrationGoal::ACTION_NAME,
-                         boost::bind(&Calibration::localCalibrationCB, this, _1),
-                         false),
+                          LocalCalibrationGoal::ACTION_NAME,
+                          boost::bind(&Calibration::localCalibrationCB, this, _1),
+                          false),
     test_calibration_as_(node_handle,
                          TestCalibrationGoal::ACTION_NAME,
                          boost::bind(&Calibration::testCalibrationCB, this, _1),
@@ -277,8 +277,8 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
         // calculate global transformation matrix
         calibration_transform_.calibrateGlobally(
                     camera_info,
-                    CalibrationTransform::toTfPose(vicon_object_pose.response.object_pose),
-                    CalibrationTransform::toTfPose(object_tracker.getCurrentPose()));
+                    Transformer::toTfPose(vicon_object_pose.response.object_pose),
+                    Transformer::toTfPose(object_tracker.getCurrentPose()));
 
         feedback.finished = true;
         publishGlobalStatus("Global calibration ready.", feedback);
@@ -294,9 +294,9 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
                 // vicon pose to depth sensor pose and publish marker
                 tf::Pose vicon_obj_pose =
                         calibration_transform_.viconToDepthSensor(
-                            CalibrationTransform::toTfPose(vicon_object_pose.response.object_pose));
+                            Transformer::toTfPose(vicon_object_pose.response.object_pose));
 
-                publishMarker(CalibrationTransform::toMsgPose(vicon_obj_pose),
+                publishMarker(Transformer::toMsgPose(vicon_obj_pose),
                               global_calibration_object_display_,
                               object_publisher_,
                               0, 1, 0);
@@ -304,7 +304,7 @@ void Calibration::globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal)
                 // publish frames
                 tf_broadcaster_.sendTransform(
                             tf::StampedTransform(
-                                CalibrationTransform::toTfTransform(object_tracker.getCurrentPose()),
+                                Transformer::toTfTransform(object_tracker.getCurrentPose()),
                                 ros::Time::now(),
                                 "XTION_RGB",
                                 "ds_object_frame"));
@@ -468,8 +468,8 @@ void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
     {
         // calculate local transformation
         calibration_transform_.calibrateLocally(
-                    CalibrationTransform::toTfPose(vicon_object_pose.response.object_pose),
-                    CalibrationTransform::toTfPose(object_tracker.getCurrentPose()),
+                    Transformer::toTfPose(vicon_object_pose.response.object_pose),
+                    Transformer::toTfPose(object_tracker.getCurrentPose()),
                     goal->calibration_object,
                     goal->calibration_object_display);
 
@@ -487,9 +487,9 @@ void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
                 // vicon pose to depth sensor pose and publish marker
                 tf::Pose vicon_obj_pose =
                         calibration_transform_.viconToDepthSensor(
-                            CalibrationTransform::toTfPose(vicon_object_pose.response.object_pose));
+                            Transformer::toTfPose(vicon_object_pose.response.object_pose));
 
-                publishMarker(CalibrationTransform::toMsgPose(vicon_obj_pose),
+                publishMarker(Transformer::toMsgPose(vicon_obj_pose),
                               goal->calibration_object_display,
                               object_publisher_,
                               0, 1, 0);
@@ -497,7 +497,7 @@ void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
                 // set coordinates
                 tf_broadcaster_.sendTransform(
                             tf::StampedTransform(
-                                CalibrationTransform::toTfTransform(
+                                Transformer::toTfTransform(
                                     object_tracker.getCurrentPose()),
                                 ros::Time::now(),
                                 "XTION_RGB",
@@ -513,7 +513,7 @@ void Calibration::localCalibrationCB(const LocalCalibrationGoalConstPtr& goal)
                 tf_broadcaster_.sendTransform(
                             tf::StampedTransform(
                                 calibration_transform_.globalTransform()
-                                    * CalibrationTransform::toTfPose(
+                                    * Transformer::toTfPose(
                                         vicon_object_pose.response.object_pose),
                                 ros::Time::now(),
                                 "XTION_RGB",
@@ -631,16 +631,16 @@ void Calibration::testCalibration(const std::string& vicon_object_name,
                 // vicon pose to depth sensor pose and publish marker
                 tf::Pose vicon_obj_pose =
                         calibration_transform_.viconToDepthSensor(
-                            CalibrationTransform::toTfPose(vicon_object_pose.response.object_pose));
+                            Transformer::toTfPose(vicon_object_pose.response.object_pose));
 
-                publishMarker(CalibrationTransform::toMsgPose(vicon_obj_pose),
+                publishMarker(Transformer::toMsgPose(vicon_obj_pose),
                               object_display,
                               object_publisher_,
                               0, 1, 0);
 
                 tf_broadcaster_.sendTransform(
                             tf::StampedTransform(
-                                CalibrationTransform::toTfTransform(
+                                Transformer::toTfTransform(
                                     object_tracker.getCurrentPose()),
                                 ros::Time::now(),
                                 "XTION_RGB",
@@ -656,7 +656,7 @@ void Calibration::testCalibration(const std::string& vicon_object_name,
                 tf_broadcaster_.sendTransform(
                             tf::StampedTransform(
                                 calibration_transform_.globalTransform()
-                                    * CalibrationTransform::toTfPose(
+                                    * Transformer::toTfPose(
                                             vicon_object_pose.response.object_pose),
                                 ros::Time::now(),
                                 "XTION_RGB",

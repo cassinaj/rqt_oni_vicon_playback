@@ -9,7 +9,8 @@ find_package(catkin REQUIRED COMPONENTS
     actionlib
     interactive_markers
     simple_object_tracker
-    tf)
+    tf
+    oni_vicon_common)
 
 find_package(Boost REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
@@ -53,7 +54,13 @@ generate_messages(
 catkin_package(
     INCLUDE_DIRS include
     LIBRARIES depth_sensor_vicon_calibration
-    CATKIN_DEPENDS actionlib_msgs actionlib interactive_markers simple_object_tracker tf
+    CATKIN_DEPENDS
+        actionlib_msgs
+        actionlib
+        interactive_markers
+        simple_object_tracker
+        tf
+        oni_vicon_common
     DEPENDS eigen
 )
 
@@ -63,16 +70,23 @@ catkin_package(
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
-include_directories(include ${catkin_INCLUDE_DIRS})
+include_directories(
+    include
+    ${catkin_INCLUDE_DIRS}
+    "/usr/include/ni/"
+)
 
-set(headers
+set(depth_sensor_vicon_calibration_HEADERS
     include/${PROJECT_NAME}/calibration.hpp
-    #include/${PROJECT_NAME}/transform.hpp
+)
+
+set(depth_sensor_vicon_calibration_SOURCES
+    src/${PROJECT_NAME}/calibration.cpp
 )
 
 add_library(depth_sensor_vicon_calibration
-   src/${PROJECT_NAME}/calibration.cpp
-   #src/${PROJECT_NAME}/transform.cpp
+   ${depth_sensor_vicon_calibration_HEADERS}
+   ${depth_sensor_vicon_calibration_SOURCES}
 )
 
 target_link_libraries(depth_sensor_vicon_calibration

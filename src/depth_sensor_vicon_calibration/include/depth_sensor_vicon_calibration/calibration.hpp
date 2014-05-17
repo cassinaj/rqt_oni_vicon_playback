@@ -85,7 +85,9 @@
 // spkf tracker
 #include <simple_object_tracker/spkf_object_tracker.hpp>
 
-#include "depth_sensor_vicon_calibration/transform.hpp"
+#include <oni_vicon_common/transformer.hpp>
+#include <oni_vicon_common/calibration_reader.hpp>
+#include <oni_vicon_common/calibration_writer.hpp>
 
 namespace depth_sensor_vicon_calibration
 {
@@ -99,7 +101,7 @@ namespace depth_sensor_vicon_calibration
                     const std::string& global_calibration_object,
                     const std::string& global_calibration_object_display,
                     const std::string& camera_info_topic);
-        ~Calibration();
+
     public: /* actions */
         void globalCalibrationCB(const GlobalCalibrationGoalConstPtr& goal);        
         void localCalibrationCB(const LocalCalibrationGoalConstPtr& goal);        
@@ -176,7 +178,7 @@ namespace depth_sensor_vicon_calibration
 
         ros::Publisher object_publisher_;
 
-        Transformer calibration_transform_;
+        oni_vicon::Transformer transformer_;
 
         bool global_calibration_complete_;
         boost::condition_variable global_calib_cond_;

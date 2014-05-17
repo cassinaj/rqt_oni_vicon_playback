@@ -71,42 +71,6 @@ void CalibrationTransform::calibrateLocally(const tf::Pose& vicon_reference_fram
     object_display_ = object_display;
 }
 
-void CalibrationTransform::localCalibrationFrom(const YAML::Node& doc)
-{
-    doc["local_calibration"]["vicon_local_to_object_local_frame"] >> local_transform_;
-    doc["local_calibration"]["object_mesh"] >> object_;
-    doc["local_calibration"]["object_mesh_display"] >> object_display_;
-}
-
-void CalibrationTransform::globalCalibrationFrom(const YAML::Node& doc)
-{
-    const YAML::Node& global_calibration = doc["global_calibration"];
-    const YAML::Node& camera_intrinsics = global_calibration["camera_intrinsics"];
-    const YAML::Node& global_transform = global_calibration["vicon_global_frame"];
-
-    global_transform >> global_transform_;
-    camera_intrinsics >> camera_intrinsics_;
-}
-
-void CalibrationTransform::localCalibrationTo(YAML::Emitter& doc) const
-{
-    doc << YAML::Key << "local_calibration" << YAML::Value
-           << YAML::BeginMap
-           << YAML::Key << "object_mesh" << YAML::Value << object_
-           << YAML::Key << "object_mesh_display" << YAML::Value << object_display_
-           << YAML::Key << "vicon_local_to_object_local_frame" << YAML::Value << local_transform_
-           << YAML::EndMap;
-}
-
-void CalibrationTransform::globalCalibrationTo(YAML::Emitter& doc) const
-{
-    doc << YAML::Key << "global_calibration" << YAML::Value
-           << YAML::BeginMap
-           << YAML::Key << "camera_intrinsics" << YAML::Value << camera_intrinsics_
-           << YAML::Key << "vicon_global_frame" << YAML::Value << global_transform_
-           << YAML::EndMap;
-}
-
 tf::Transform CalibrationTransform::globalTransform() const
 {
     return global_transform_;

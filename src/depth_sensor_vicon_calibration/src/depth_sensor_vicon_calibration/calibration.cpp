@@ -55,6 +55,7 @@
 #include <oni_vicon_recorder/ViconObjectPose.h>
 
 #include <oni_vicon_common/types.hpp>
+#include <oni_vicon_common/exceptions.hpp>
 #include <oni_vicon_common/type_conversion.hpp>
 
 using namespace depth_sensor_vicon_calibration;
@@ -795,16 +796,21 @@ bool Calibration::loadGlobalCalibrationCB(LoadGlobalCalibration::Request& reques
 {
     CalibrationReader calibration_reader;
     GlobalCalibration global_calibration;
-    if (calibration_reader.loadGlobalCalibration(request.source, global_calibration))
+    try
     {
+        calibration_reader.loadGlobalCalibration(request.source, global_calibration);
         transformer_.globalCalibration(global_calibration);
-
         ROS_INFO("Global calibration %s loaded", request.source.c_str());
-        return true;
+    }
+    catch(LoadingCalibrationException& e)
+    {
+        ROS_ERROR("Failed to load global calibration from %s", request.source.c_str());
+        ROS_DEBUG("Exception: %s", e.what());
+
+        return false;
     }
 
-    ROS_ERROR("Failed to load global calibration from %s", request.source.c_str());
-    return false;
+    return true;
 }
 
 bool Calibration::saveLocalCalibrationCB(SaveLocalCalibration::Request& request,
@@ -827,16 +833,21 @@ bool Calibration::loadLocalCalibrationCB(LoadLocalCalibration::Request& request,
 {
     CalibrationReader calibration_reader;
     LocalCalibration local_calibration;
-    if (calibration_reader.loadLocalCalibration(request.source, local_calibration))
+    try
     {
+        calibration_reader.loadLocalCalibration(request.source, local_calibration);
         transformer_.localCalibration(local_calibration);
-
         ROS_INFO("Local calibration %s loaded", request.source.c_str());
-        return true;
+    }
+    catch(LoadingCalibrationException& e)
+    {
+        ROS_ERROR("Failed to load local calibration from %s", request.source.c_str());
+        ROS_DEBUG("Exception: %s", e.what());
+
+        return false;
     }
 
-    ROS_ERROR("Failed to load local calibration from %s", request.source.c_str());
-    return false;
+    return true;
 }
 
 

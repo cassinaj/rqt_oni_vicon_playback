@@ -1,8 +1,0 @@
-string ACTION_NAME=/depth_sensor_vicon_calibration/GlobalCalibration
-
----
----
-string status
-int32 progress
-int32 max_progress
-bool finished

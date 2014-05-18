@@ -44,8 +44,8 @@
  *   Karlsruhe Institute of Technology (KIT)
  */
 
-#ifndef RQT_PLAYBACK_CONTROLLER_PLUGIN_HPP
-#define RQT_PLAYBACK_CONTROLLER_PLUGIN_HPP
+#ifndef rqt_oni_vicon_playback_PLUGIN_HPP
+#define rqt_oni_vicon_playback_PLUGIN_HPP
 
 #include <ui_playback_controller.h>
 
@@ -62,20 +62,20 @@
 #include <ros/ros.h>
 #include <rqt_gui_cpp/plugin.h>
 #include <actionlib/client/simple_action_client.h>
-#include <ros_action_helper/action_helper.hpp>
+#include <actionlib_macros/actionlib_macros.hpp>
 
-#include <oni_vicon_player/OpenAction.h>
-#include <oni_vicon_player/PlayAction.h>
+#include <oni_vicon_playback/OpenAction.h>
+#include <oni_vicon_playback/PlayAction.h>
 
-namespace rqt_playback_controller
+namespace rqt_oni_vicon_playback
 {
     class PlaybackController:
         public rqt_gui_cpp::Plugin
     {
     Q_OBJECT
 
-    ACTION_IMPLEMENT_CLIENT(oni_vicon_player, Open)
-    ACTION_IMPLEMENT_CLIENT(oni_vicon_player, Play)
+    ACTION_IMPLEMENT_CLIENT(oni_vicon_playback, Open)
+    ACTION_IMPLEMENT_CLIENT(oni_vicon_playback, Play)
 
     public:
         struct StatusItem

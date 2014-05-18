@@ -44,7 +44,7 @@
  *   Karlsruhe Institute of Technology (KIT)
  */
 
-#include "rqt_playback_controller/playback_controller.hpp"
+#include "rqt_oni_vicon_playback/playback_controller.hpp"
 
 // boost
 #include <boost/filesystem.hpp>
@@ -72,19 +72,19 @@
 #include <rviz/load_resource.h>
 
 // services
-#include <oni_vicon_player/Pause.h>
-#include <oni_vicon_player/SeekFrame.h>
-#include <oni_vicon_player/SetPlaybackSpeed.h>
+#include <oni_vicon_playback/Pause.h>
+#include <oni_vicon_playback/SeekFrame.h>
+#include <oni_vicon_playback/SetPlaybackSpeed.h>
 
 using namespace rviz;
-using namespace rqt_playback_controller;
-using namespace oni_vicon_player;
+using namespace rqt_oni_vicon_playback;
+using namespace oni_vicon_playback;
 
 PlaybackController::PlaybackController():
     rqt_gui_cpp::Plugin(),
     widget_(0),
-    ACTION_INIT(oni_vicon_player, Open),
-    ACTION_INIT(oni_vicon_player, Play)
+    ACTION_INIT(oni_vicon_playback, Open),
+    ACTION_INIT(oni_vicon_playback, Play)
 {
     setObjectName("PlaybackController");
 }
@@ -184,7 +184,7 @@ void PlaybackController::onOpen()
 {
     setActivity("opening", true);
     ACTION_GOAL(Open).record_path = ui_.recordingDirLineEdit->text().toStdString();
-    ACTION_SEND_GOAL(PlaybackController, oni_vicon_player, Open);
+    ACTION_SEND_GOAL(PlaybackController, oni_vicon_playback, Open);
 }
 
 void PlaybackController::onClose()
@@ -195,7 +195,7 @@ void PlaybackController::onClose()
 void PlaybackController::onPlay()
 {
     ACTION_GOAL(Play).starting_frame = ui_.frameSlider->value();
-    ACTION_SEND_GOAL(PlaybackController, oni_vicon_player, Play);
+    ACTION_SEND_GOAL(PlaybackController, oni_vicon_playback, Play);
 }
 
 void PlaybackController::onPause()
@@ -323,11 +323,11 @@ void PlaybackController::onSetPlaybackSpeed(double speed)
 // == Action callbacks ========================================================================== //
 // ============================================================================================== //
 
-ACTION_ON_ACTIVE(PlaybackController, oni_vicon_player, Open)
+ACTION_ON_ACTIVE(PlaybackController, oni_vicon_playback, Open)
 {
 }
 
-ACTION_ON_FEEDBACK(PlaybackController, oni_vicon_player, Open)
+ACTION_ON_FEEDBACK(PlaybackController, oni_vicon_playback, Open)
 {
     setActivity("open", ACTION_FEEDBACK(Open)->open);
     setActivity("opening", !ACTION_FEEDBACK(Open)->open);
@@ -339,7 +339,7 @@ ACTION_ON_FEEDBACK(PlaybackController, oni_vicon_player, Open)
                                ACTION_FEEDBACK(Open)->total_depth_sensor_frames);
 }
 
-ACTION_ON_DONE(PlaybackController, oni_vicon_player, Open)
+ACTION_ON_DONE(PlaybackController, oni_vicon_playback, Open)
 {
     setActivity("opening", false);
     setActivity("open", false);
@@ -354,20 +354,20 @@ ACTION_ON_DONE(PlaybackController, oni_vicon_player, Open)
     }
 }
 
-ACTION_ON_ACTIVE(PlaybackController, oni_vicon_player, Play)
+ACTION_ON_ACTIVE(PlaybackController, oni_vicon_playback, Play)
 {
     ROS_INFO("Player started");
     setActivity("playing", true);
 }
 
-ACTION_ON_FEEDBACK(PlaybackController, oni_vicon_player, Play)
+ACTION_ON_FEEDBACK(PlaybackController, oni_vicon_playback, Play)
 {
     emit updatePlayback(ACTION_FEEDBACK(Play)->current_time,
                         ACTION_FEEDBACK(Play)->current_vicon_frame,
                         ACTION_FEEDBACK(Play)->current_depth_sensor_frame);
 }
 
-ACTION_ON_DONE(PlaybackController, oni_vicon_player, Play)
+ACTION_ON_DONE(PlaybackController, oni_vicon_playback, Play)
 {
     setActivity("playing", false);
     ROS_INFO("Player stopped");
@@ -496,4 +496,4 @@ bool PlaybackController::box(QString message, bool rval, QMessageBox::Icon type)
     return rval;
 }
 
-PLUGINLIB_EXPORT_CLASS(rqt_playback_controller::PlaybackController, rqt_gui_cpp::Plugin)
+PLUGINLIB_EXPORT_CLASS(rqt_oni_vicon_playback::PlaybackController, rqt_gui_cpp::Plugin)

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(rqt_playback_controller)
+project(rqt_oni_vicon_playback)
 
 find_package(catkin REQUIRED COMPONENTS
     rqt_gui
@@ -7,9 +7,9 @@ find_package(catkin REQUIRED COMPONENTS
     actionlib_msgs
     actionlib
     rviz
-    ros_action_helper
-    depth_sensor_vicon_calibration
-    oni_vicon_player)
+    actionlib_macros
+    oni_vicon_calibration
+    oni_vicon_playback)
 
 find_package(Boost REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
@@ -29,8 +29,8 @@ catkin_package(
     actionlib_msgs
     actionlib
     rviz
-    depth_sensor_vicon_calibration
-    oni_vicon_player
+    oni_vicon_calibration
+    oni_vicon_playback
 )
 
 catkin_python_setup()
@@ -39,16 +39,16 @@ catkin_python_setup()
 ## Build ##
 ###########
 
-set(rqt_playback_controller_SOURCES
-  src/rqt_playback_controller/playback_controller.cpp
+set(rqt_oni_vicon_playback_SOURCES
+  src/rqt_oni_vicon_playback/playback_controller.cpp
 )
 
-set(rqt_playback_controller_HEADERS
-  include/rqt_playback_controller/playback_controller.hpp
+set(rqt_oni_vicon_playback_HEADERS
+  include/rqt_oni_vicon_playback/playback_controller.hpp
 )
 
-set(rqt_playback_controller_UIS
-  src/rqt_playback_controller/playback_controller.ui
+set(rqt_oni_vicon_playback_UIS
+  src/rqt_oni_vicon_playback/playback_controller.ui
 )
 
 include_directories(
@@ -57,14 +57,14 @@ include_directories(
     ${catkin_INCLUDE_DIRS}
 )
 
-qt4_wrap_cpp(rqt_playback_controller_MOCS ${rqt_playback_controller_HEADERS})
-qt4_wrap_ui(rqt_playback_controller_UIS_H ${rqt_playback_controller_UIS})
+qt4_wrap_cpp(rqt_oni_vicon_playback_MOCS ${rqt_oni_vicon_playback_HEADERS})
+qt4_wrap_ui(rqt_oni_vicon_playback_UIS_H ${rqt_oni_vicon_playback_UIS})
 
 add_library(${PROJECT_NAME}
-    ${rqt_playback_controller_SOURCES}
-    ${rqt_playback_controller_HEADERS}
-    ${rqt_playback_controller_MOCS}
-    ${rqt_playback_controller_UIS_H}
+    ${rqt_oni_vicon_playback_SOURCES}
+    ${rqt_oni_vicon_playback_HEADERS}
+    ${rqt_oni_vicon_playback_MOCS}
+    ${rqt_oni_vicon_playback_UIS_H}
 )
 
 target_link_libraries(${PROJECT_NAME}
@@ -91,7 +91,7 @@ install(
 )
 
 ## Mark executables and/or libraries for installation
-install(TARGETS rqt_playback_controller
+install(TARGETS rqt_oni_vicon_playback
    ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
    LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
    RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
@@ -100,7 +100,7 @@ install(TARGETS rqt_playback_controller
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 install(PROGRAMS
-   scripts/rqt_playback_controller
+   scripts/rqt_oni_vicon_playback
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
@@ -109,7 +109,7 @@ install(PROGRAMS
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_rqt_playback_controller.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_rqt_oni_vicon_playback.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()

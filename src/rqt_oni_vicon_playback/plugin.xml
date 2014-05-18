@@ -1,5 +1,5 @@
-<library path="lib/librqt_playback_controller">
- <class name="rqt_playback_controller/PlaybackController" type="rqt_playback_controller::PlaybackController" base_class_type="rqt_gui_cpp::Plugin">
+<library path="lib/librqt_oni_vicon_playback">
+ <class name="rqt_oni_vicon_playback/PlaybackController" type="rqt_oni_vicon_playback::PlaybackController" base_class_type="rqt_gui_cpp::Plugin">
    <description>
 	 Playback Vicon and Kinect Depth images
    </description>
@@ -12,7 +12,7 @@
 	   <label>Subgroup</label>
 	 </group>
 	 -->
-	 <label>Vicon-Kinect/XTION Data Playback</label>
+	 <label>Vicon-Kinect Data Playback</label>
 	 <icon type="theme">media-playback-start</icon>
 	 <statustip>Woo Woo</statustip>
    </qtgui>

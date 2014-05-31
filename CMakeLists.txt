@@ -8,7 +8,6 @@ find_package(catkin REQUIRED COMPONENTS
     actionlib
     rviz
     actionlib_macros
-    oni_vicon_calibration
     oni_vicon_playback)
 
 find_package(Boost REQUIRED)
@@ -29,7 +28,6 @@ catkin_package(
     actionlib_msgs
     actionlib
     rviz
-    oni_vicon_calibration
     oni_vicon_playback
 )
 

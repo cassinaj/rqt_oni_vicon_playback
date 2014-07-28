@@ -51,6 +51,7 @@
 
 // C++/STD
 #include <iostream>
+#include <fstream>
 #include <sstream>
 #include <cstdlib>
 
@@ -65,6 +66,7 @@
 #include <QBrush>
 #include <QPainter>
 #include <QPixmap>
+#include <QMessageBox>
 
 // ros
 #include <pluginlib/class_list_macros.h>
@@ -75,6 +77,7 @@
 #include <oni_vicon_playback/Pause.h>
 #include <oni_vicon_playback/SeekFrame.h>
 #include <oni_vicon_playback/SetPlaybackSpeed.h>
+#include <oni_vicon_playback/SetTimeOffset.h>
 
 using namespace rviz;
 using namespace rqt_oni_vicon_playback;
@@ -131,14 +134,20 @@ void PlaybackController::initPlugin(qt_gui_cpp::PluginContext& context)
     connect(ui_.pauseButton, SIGNAL(clicked()), this, SLOT(onPause()));
     connect(ui_.stopButton, SIGNAL(clicked()), this, SLOT(onStop()));
     connect(ui_.selectButton, SIGNAL(clicked()), this, SLOT(onSelectRecordingDirectory()));
+    connect(ui_.saveTimeOffsetButton, SIGNAL(clicked()), this, SLOT(onSaveOffset()));
 
     connect(ui_.frameSlider, SIGNAL(valueChanged(int)), this, SLOT(onSetFrame(int)));
     connect(ui_.playbackSpeedSpinBox, SIGNAL(valueChanged(double)),
             this, SLOT(onSetPlaybackSpeed(double)));
+    connect(ui_.timeOffsetSpinBox, SIGNAL(valueChanged(double)),
+            this, SLOT(onSetTimeOffset(double)));
+
+    connect(ui_.stepsizeSpinBox, SIGNAL(valueChanged(double)),
+            this, SLOT(onSetStepsize(double)));
 
     connect(timer_, SIGNAL(timeout()), this, SLOT(onUpdateStatus()));
-    connect(this, SIGNAL(updateOpeningProgress(int,int,double,int,int)),
-            this, SLOT(onUpdateOpeningProgress(int,int,double,int,int)));
+    connect(this, SIGNAL(updateOpeningProgress(int,int,double,int,int,double)),
+            this, SLOT(onUpdateOpeningProgress(int,int,double,int,int,double)));
 
     connect(this, SIGNAL(updatePlayback(double,int,int)),
             this, SLOT(onUpdatePlayback(double,int,int)));
@@ -169,11 +178,17 @@ void PlaybackController::shutdownPlugin()
 void PlaybackController::saveSettings(qt_gui_cpp::Settings& plugin_settings,
                                       qt_gui_cpp::Settings& instance_settings) const
 {
+    instance_settings.setValue("recording_location", ui_.recordingDirLineEdit->text());
+    instance_settings.setValue("time_offset", ui_.timeOffsetSpinBox->value());
+    instance_settings.setValue("stepsize", ui_.stepsizeSpinBox->value());
 }
 
 void PlaybackController::restoreSettings(const qt_gui_cpp::Settings& plugin_settings,
                                          const qt_gui_cpp::Settings& instance_settings)
 {
+    ui_.recordingDirLineEdit->setText(instance_settings.value("recording_location").toString());
+    ui_.timeOffsetSpinBox->setValue(instance_settings.value("time_offset").toDouble());
+    ui_.stepsizeSpinBox->setValue(instance_settings.value("stepsize").toDouble());
 }
 
 // ============================================================================================== //
@@ -231,7 +246,7 @@ void PlaybackController::onSelectRecordingDirectory()
     QString dir = QFileDialog::getExistingDirectory(
                     widget_,
                     "Recording Directory",
-                    "~/",
+                    ui_.recordingDirLineEdit->text(),
                     QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
 
     if (!dir.isEmpty())
@@ -264,7 +279,8 @@ void PlaybackController::onUpdateOpeningProgress(int progress,
                                                  int progress_max,
                                                  double total_time,
                                                  int total_vicon_frames,
-                                                 int total_depth_sensor_frames)
+                                                 int total_depth_sensor_frames,
+                                                 double time_offet)
 {
     ui_.openingProgressBar->setValue(progress);
     ui_.openingProgressBar->setMaximum(progress_max);
@@ -278,6 +294,8 @@ void PlaybackController::onUpdateOpeningProgress(int progress,
     statusItem("Depth Sensor Frames").status->setText(QString::number(total_depth_sensor_frames));
 
     ui_.frameSlider->setMaximum(total_depth_sensor_frames);
+
+    ui_.timeOffsetSpinBox->setValue(time_offet * 1.e3); // convert to milliseconds
 }
 
 void PlaybackController::onUpdatePlayback(double time,
@@ -319,6 +337,63 @@ void PlaybackController::onSetPlaybackSpeed(double speed)
     ros::service::call(SetPlaybackSpeed::Request::SERVICE_NAME, service);
 }
 
+void PlaybackController::onSetTimeOffset(double offset)
+{
+    SetTimeOffset service;
+    service.request.time_offset = offset * 1e-3; // convert to seconds
+    ros::service::call(SetTimeOffset::Request::SERVICE_NAME, service);
+}
+
+void PlaybackController::onSetStepsize(double stepsize)
+{
+    ui_.timeOffsetSpinBox->setSingleStep(stepsize);
+}
+
+void PlaybackController::onSaveOffset()
+{
+    if (QMessageBox::question(
+                widget_,
+                "Save time offset",
+                "This will change the current recording file. Do you want to proceed?",
+                QMessageBox::Yes|QMessageBox::No) != QMessageBox::Yes)
+    {
+        return;
+    }
+
+    std::string content;
+    boost::filesystem::path file_path = ui_.recordingDirLineEdit->text().toStdString();
+    std::string file = (file_path / file_path.leaf()).string() + ".txt";
+
+    std::ifstream ifs(file.c_str());
+    if (!ifs.is_open())
+    {
+        box(("Failed to open data file " + file).c_str(), false, QMessageBox::Critical);
+        return;
+    }
+
+    double offset;
+    ifs >> offset;
+    std::string line;
+    while (ifs.peek() != EOF)
+    {
+        std::getline(ifs, line);
+        content += line + "\n";
+    }
+
+    std::ofstream ofs(file.c_str());
+    if (!ofs.is_open())
+    {
+        box(("Failed to open data file " + file).c_str(), false, QMessageBox::Critical);
+        return;
+    }
+
+    ofs << (ui_.timeOffsetSpinBox->value()*1e-3);
+    ofs << content;
+    ofs.close();
+
+    box("Time offset added and saved.", false, QMessageBox::Information);
+}
+
 // ============================================================================================== //
 // == Action callbacks ========================================================================== //
 // ============================================================================================== //
@@ -336,7 +411,8 @@ ACTION_ON_FEEDBACK(PlaybackController, oni_vicon_playback, Open)
                                ACTION_FEEDBACK(Open)->progress_max,
                                ACTION_FEEDBACK(Open)->total_time,
                                ACTION_FEEDBACK(Open)->total_vicon_frames,
-                               ACTION_FEEDBACK(Open)->total_depth_sensor_frames);
+                               ACTION_FEEDBACK(Open)->total_depth_sensor_frames,
+                               ACTION_FEEDBACK(Open)->time_offet);
 }
 
 ACTION_ON_DONE(PlaybackController, oni_vicon_playback, Open)
